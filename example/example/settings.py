@@ -1,3 +1,9 @@
+import os
+import sys
+
+# Add django_pipes to PATH so we can import it
+sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '../../')))
+
 # Django settings for example project.
 
 DEBUG = True
@@ -11,7 +17,7 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'ENGINE': 'django.db.backends.sqlite3',  # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
         'NAME': 'example.db',                      # Or path to database file if using sqlite3.
         # The following settings are not used with sqlite3:
         'USER': '',
@@ -118,9 +124,10 @@ INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     # 'django.contrib.sites',
-    'django.contrib.messages',
+    # 'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.admin',
+    'django_pipes',
     'example',
 )
 

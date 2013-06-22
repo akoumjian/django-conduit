@@ -1,12 +1,12 @@
 from importlib import import_module
-from functools import wraps
 from django.http import HttpResponse
 from django.utils import simplejson
-from django.forms.models import model_to_dict
 from decimal import Decimal
 from django.db import models
 import logging
 logger = logging.getLogger(__name__)
+
+from django_pipes.subscribe import subscribe, avoid, match
 
 
 class HttpInterrupt(Exception):
@@ -138,7 +138,6 @@ class ModelResource(Pipeline):
         Manipulate request data before updating objects
         """
         return request, args, kwargs
-
 
     @match(match=['get', 'detail'])
     def get_detail(self, request, *args, **kwargs):

@@ -1,4 +1,4 @@
-from example.pipeline import ModelResource
+from django_pipes.pipes import ModelResource
 from example.models import Foo
 
 
