@@ -293,4 +293,3 @@ class ModelResource(Pipeline):
 
     def response(self, request, *args, **kwargs):
         return HttpResponse(kwargs['serialized'], status=kwargs['status'], content_type='application/json')
-
