@@ -201,7 +201,9 @@ class ModelResource(Conduit):
     @avoid(avoid=['delete'])
     def objs_to_bundles(self, request, *args, **kwargs):
         """
-        Convert object fields to serializable data types
+        Returns list of objects bundled with python dict representations
+
+        Part of the dehydration process
         """
         if kwargs.get('instance', None):
             objs = [kwargs['instance']]
