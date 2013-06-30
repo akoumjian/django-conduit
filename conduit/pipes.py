@@ -137,7 +137,7 @@ class ModelResource(Conduit):
         except cls.DoesNotExist:
             response = HttpResponse('Object does not exist', status=404, content_type='application/json')
             raise HttpInterrupt(response)
-        kwargs['instance'] = instance
+        kwargs['objs'] = [instance]
         return (request, args, kwargs)
 
     def check_permissions(self, request, *args, **kwargs):
@@ -201,13 +201,13 @@ class ModelResource(Conduit):
         """
         Manipulate request data before updating objects
         """
-        if 'detail' in kwargs['pub']:
-            data_dicts = [kwargs['request_data']]
-        else:
-            data_dicts = kwargs['request_data']
-        print data_dicts
+        # If updating/creating single object, we get a dict
+        # change it to a list so we can place inside loop
+        data_dicts = kwargs['request_data']
+        if not isinstance(data_dicts, list):
+            data_dicts = [data_dicts]
+
         for data in data_dicts:
-            # print data
             for fieldname in data.keys():
                 model_field = self.Meta.model._meta.get_field(fieldname)
                 data[fieldname] = self._from_basic_type(model_field, data[fieldname])
@@ -233,9 +233,9 @@ class ModelResource(Conduit):
 
     @match(match=['put', 'detail'])
     def put_detail(self, request, *args, **kwargs):
-        instance = self._update_from_dict(kwargs['instance'], kwargs['request_data'])
+        instance = self._update_from_dict(kwargs['objs'][0], kwargs['request_data'])
         instance.save()
-        kwargs['instance'] = instance
+        kwargs['objs'] = [instance]
         kwargs['status'] = 201
         return (request, args, kwargs)
 
@@ -244,7 +244,7 @@ class ModelResource(Conduit):
         instance = self.Meta.model()
         instance = self._update_from_dict(instance, kwargs['request_data'])
         instance.save()
-        kwargs['instance'] = instance
+        kwargs['objs'] = [instance]
         kwargs['status'] = 201
         return (request, args, kwargs)
 
@@ -254,13 +254,13 @@ class ModelResource(Conduit):
         for field in fields:
             if field.related:
                 related_data = kwargs['request_data'][field.attribute]
-                field.save_related(kwargs['instance'], related_data)
+                field.save_related(kwargs['objs'][0], related_data)
         return request, args, kwargs
 
     @match(match=['detail', 'delete'])
     def delete_detail(self, request, *args, **kwargs):
-        instance = kwargs['instance']
-        del kwargs['instance']
+        instance = kwargs['objs'][0]
+        del kwargs['objs']
         instance.delete()
         kwargs['response'] = ''
         kwargs['status'] = 204
@@ -288,12 +288,7 @@ class ModelResource(Conduit):
 
         Part of the dehydration process
         """
-        if kwargs.get('instance', None):
-            objs = [kwargs['instance']]
-        elif kwargs.get('objs', None):
-            objs = kwargs['objs']
-        else:
-            objs = []
+        objs = kwargs.get('objs', [])
         bundles = []
         for obj in objs:
             obj_data = {}
