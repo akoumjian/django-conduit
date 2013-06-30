@@ -2,9 +2,11 @@ from conduit.pipes import ModelResource
 from example.models import Foo, Bar, Baz
 from conduit.fields import ForeignKeyField, ManyToManyField
 
+
 class BarResource(ModelResource):
     class Meta(ModelResource.Meta):
         model = Bar
+
 
 class BazResource(ModelResource):
     class Meta(ModelResource.Meta):

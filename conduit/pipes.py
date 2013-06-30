@@ -86,12 +86,15 @@ class ModelResource(Conduit):
             'delete_list',
             'objs_to_bundles',
             'dehydrate_explicit_fields',
+            'add_resource_uri',
             'produce_response_data',
             'serialize_response_data',
             'response'
         )
+        resource_name = None
         pk_field = 'id'
         limit = 20
+        api = None
 
     def forbidden(self):
         response = HttpResponse('', status=403, content_type='application/json')
@@ -109,6 +112,37 @@ class ModelResource(Conduit):
                 if not fieldname.startswith('_'):
                     fields.append(field)
         return fields
+
+    def _get_resource_name(self):
+        resource_name = getattr(self, 'resource_name', None)
+        # Guess name from model if not set
+        if not resource_name:
+            resource_name = self.Meta.model._meta.module_name
+        return resource_name
+
+    def _get_resource_uri(self, obj=None, data=None):
+        resource_uri = []
+
+        # Grab the api portion
+        api = getattr(self, 'api', None)
+        if api:
+            resource_uri.append(api.api_url)
+
+        # Get the resource portion
+        resource_uri.append(self._get_resource_name())
+
+        # Get the object portion
+        if obj:
+            pk = getattr(obj, self.Meta.pk_field, None)
+        elif data:
+            pk = data.get(self.Meta.pk_field, None)
+        else:
+            pk = None
+        if pk:
+            resource_uri.append(str(pk))
+
+        resource_uri = '/'.join(resource_uri)
+        return resource_uri
 
     def build_pub(self, request, *args, **kwargs):
         """
@@ -304,7 +338,7 @@ class ModelResource(Conduit):
         kwargs['bundles'] = bundles
         return (request, args, kwargs)
 
-    @subscribe(sub=['get'])
+    @avoid(avoid=['delete'])
     def dehydrate_explicit_fields(self, request, *args, **kwargs):
         """
         Iterates through field attributes and runs their dehydrate method
@@ -313,6 +347,12 @@ class ModelResource(Conduit):
         for bundle in kwargs['bundles']:
             for field in fields:
                 field.dehydrate(bundle)
+        return request, args, kwargs
+
+    @avoid(avoid=['delete'])
+    def add_resource_uri(self, request, *args, **kwargs):
+        for bundle in kwargs['bundles']:
+            bundle['data']['resource_uri'] = self._get_resource_uri(obj=bundle['obj'])
         return request, args, kwargs
 
     def _to_basic_type(self, obj, field):

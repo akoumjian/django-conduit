@@ -8,6 +8,7 @@ class APIField(object):
 class ForeignKeyField(APIField):
     dehydrate_conduit = (
         'objs_to_bundles',
+        'add_resource_uri',
     )
 
     save_conduit = (
@@ -82,6 +83,7 @@ class ForeignKeyField(APIField):
 class ManyToManyField(APIField):
     dehydrate_conduit = (
         'objs_to_bundles',
+        'add_resource_uri',
     )
 
     save_conduit = (
