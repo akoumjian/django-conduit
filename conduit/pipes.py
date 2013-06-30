@@ -4,6 +4,8 @@ from django.utils import simplejson
 from decimal import Decimal
 from django.db import models
 import logging
+from datetime import datetime
+from dateutil import parser
 logger = logging.getLogger(__name__)
 
 from conduit.subscribe import subscribe, avoid, match
@@ -72,11 +74,13 @@ class ModelResource(Conduit):
             'get_object_from_kwargs',
             'json_to_python',
             'check_permissions',
+            'hydrate_request_data',
             'get_detail',
             'get_list',
             'post_detail',
-            'post_list',
             'put_detail',
+            'post_list',
+            'save_related_objs',
             'put_list',
             'delete_detail',
             'delete_list',
@@ -86,7 +90,7 @@ class ModelResource(Conduit):
             'serialize_response_data',
             'response'
         )
-        pk_field = 'pk'
+        pk_field = 'id'
         limit = 20
 
     def forbidden(self):
@@ -105,8 +109,6 @@ class ModelResource(Conduit):
                 if not fieldname.startswith('_'):
                     fields.append(field)
         return fields
-
-
 
     def build_pub(self, request, *args, **kwargs):
         """
@@ -128,7 +130,10 @@ class ModelResource(Conduit):
         """
         cls = self.Meta.model
         try:
-            instance = cls.objects.get(pk=kwargs['pk'])
+            kwds = {
+                self.Meta.pk_field: kwargs[self.Meta.pk_field]
+            }
+            instance = cls.objects.get(**kwds)
         except cls.DoesNotExist:
             response = HttpResponse('Object does not exist', status=404, content_type='application/json')
             raise HttpInterrupt(response)
@@ -145,11 +150,67 @@ class ModelResource(Conduit):
             kwargs['request_data'] = simplejson.loads(data)
         return (request, args, kwargs)
 
+    def _from_basic_type(self, field, data):
+        """
+        Convert deserialized data types into Python types
+        """
+        if isinstance(field, models.AutoField):
+            return data
+
+        if isinstance(field, models.BooleanField):
+            return data
+
+        if isinstance(field, models.CharField):
+            return data
+
+        if isinstance(field, models.TextField):
+            return data
+
+        if isinstance(field, models.IntegerField):
+            return int(data)
+
+        if isinstance(field, models.FloatField):
+            return float(data)
+
+        if isinstance(field, models.FileField):
+            return data
+
+        if isinstance(field, models.ImageField):
+            return data
+
+        if isinstance(field, models.DateTimeField):
+            return parser.parse(data)
+
+        if isinstance(field, models.DateField):
+            return parser.parse(data)
+
+        if isinstance(field, models.DecimalField):
+            return Decimal(data)
+
+        if isinstance(field, models.ForeignKey):
+            return data
+
+        if isinstance(field, models.ManyToManyField):
+            return data
+
+        logger.info('Could not find field type match for {0}'.format(field))
+        return None
+
     @subscribe(sub=['post', 'put'])
     def hydrate_request_data(self, request, *args, **kwargs):
         """
         Manipulate request data before updating objects
         """
+        if 'detail' in kwargs['pub']:
+            data_dicts = [kwargs['request_data']]
+        else:
+            data_dicts = kwargs['request_data']
+        print data_dicts
+        for data in data_dicts:
+            # print data
+            for fieldname in data.keys():
+                model_field = self.Meta.model._meta.get_field(fieldname)
+                data[fieldname] = self._from_basic_type(model_field, data[fieldname])
         return request, args, kwargs
 
     @match(match=['get', 'detail'])
@@ -186,6 +247,15 @@ class ModelResource(Conduit):
         kwargs['instance'] = instance
         kwargs['status'] = 201
         return (request, args, kwargs)
+
+    @subscribe(sub=['post', 'put'])
+    def save_related_objs(self, request, *args, **kwargs):
+        fields = self._get_explicit_fields()
+        for field in fields:
+            if field.related:
+                related_data = kwargs['request_data'][field.attribute]
+                field.save_related(kwargs['instance'], related_data)
+        return request, args, kwargs
 
     @match(match=['detail', 'delete'])
     def delete_detail(self, request, *args, **kwargs):
@@ -248,7 +318,7 @@ class ModelResource(Conduit):
         for bundle in kwargs['bundles']:
             for field in fields:
                 field.dehydrate(bundle)
-        return request, args, kwargs               
+        return request, args, kwargs
 
     def _to_basic_type(self, obj, field):
         """
