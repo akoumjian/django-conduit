@@ -48,14 +48,14 @@ class Conduit(object):
             Process the request, return a response
             """
             self = cls()
-            for method_string in self.conduit[:-1]:
+            for method_string in self.Meta.conduit[:-1]:
                 method = self._get_method(method_string)
                 try:
                     (request, args, kwargs,) = method(self, request, *args, **kwargs)
                 except HttpInterrupt as e:
                     return e.response
 
-            response_method = self._get_method(self.conduit[-1])
+            response_method = self._get_method(self.Meta.conduit[-1])
             return response_method(self, request, *args, **kwargs)
 
         return view
@@ -66,26 +66,28 @@ class ModelResource(Conduit):
     RESTful api resource
     """
 
-    conduit = (
-        'build_pub',
-        'get_object_from_kwargs',
-        'json_to_python',
-        'check_permissions',
-        'get_detail',
-        'get_list',
-        'post_detail',
-        'post_list',
-        'put_detail',
-        'put_list',
-        'delete_detail',
-        'delete_list',
-        'objs_to_bundles',
-        'produce_response_data',
-        'serialize_response_data',
-        'response'
-    )
-    pk_field = 'pk'
-    limit = 20
+    class Meta:
+        conduit = (
+            'build_pub',
+            'get_object_from_kwargs',
+            'json_to_python',
+            'check_permissions',
+            'get_detail',
+            'get_list',
+            'post_detail',
+            'post_list',
+            'put_detail',
+            'put_list',
+            'delete_detail',
+            'delete_list',
+            'objs_to_bundles',
+            'dehydrate_explicit_fields',
+            'produce_response_data',
+            'serialize_response_data',
+            'response'
+        )
+        pk_field = 'pk'
+        limit = 20
 
     def forbidden(self):
         response = HttpResponse('', status=403, content_type='application/json')
@@ -95,13 +97,24 @@ class ModelResource(Conduit):
         instance.__dict__.update(data)
         return instance
 
+    def _get_explicit_fields(self):
+        fields = []
+        field_meta = getattr(self, 'Fields', None)
+        if field_meta:
+            for fieldname, field in field_meta.__dict__.items():
+                if not fieldname.startswith('_'):
+                    fields.append(field)
+        return fields
+
+
+
     def build_pub(self, request, *args, **kwargs):
         """
         Builds a list of keywords relevant to this request
         """
         pub = []
         pub.append(request.method.lower())
-        if kwargs.get(self.pk_field, None):
+        if kwargs.get(self.Meta.pk_field, None):
             pub.append('detail')
         else:
             pub.append('list')
@@ -148,7 +161,7 @@ class ModelResource(Conduit):
     def get_list(self, request, *args, **kwargs):
         cls = self.Meta.model
         total_instances = cls.objects.all()
-        limit_instances = total_instances[:self.limit]
+        limit_instances = total_instances[:self.Meta.limit]
         kwargs['objs'] = limit_instances
         kwargs['meta'] = {
             'total': total_instances.count(),
@@ -225,6 +238,17 @@ class ModelResource(Conduit):
 
         kwargs['bundles'] = bundles
         return (request, args, kwargs)
+
+    @subscribe(sub=['get'])
+    def dehydrate_explicit_fields(self, request, *args, **kwargs):
+        """
+        Iterates through field attributes and runs their dehydrate method
+        """
+        fields = self._get_explicit_fields()
+        for bundle in kwargs['bundles']:
+            for field in fields:
+                field.dehydrate(bundle)
+        return request, args, kwargs               
 
     def _to_basic_type(self, obj, field):
         """
