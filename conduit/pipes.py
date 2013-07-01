@@ -4,8 +4,8 @@ from django.utils import simplejson
 from decimal import Decimal
 from django.db import models
 import logging
-from datetime import datetime
 from dateutil import parser
+from django.conf.urls import url, patterns
 logger = logging.getLogger(__name__)
 
 from conduit.subscribe import subscribe, avoid, match
@@ -20,6 +20,34 @@ class HttpInterrupt(Exception):
     """
     def __init__(self, response):
         self.response = response or HttpResponse('No content')
+
+
+class Api(object):
+    _resources = []
+
+
+    def __init__(self, name='api', version='v1'):
+        self.name = name
+        self.version = version
+
+    def register(self, resource_instance):
+        self._resources.append(resource_instance)
+        resource_instance.Meta.api = self
+
+    @property
+    def api_url(self):
+        url_bits = [self.name]
+        if self.version:
+            url_bits.append(self.version)
+        return '/'.join(url_bits)
+
+    @property
+    def urls(self):
+        url_patterns = []
+        for resource in self._resources:
+            url_patterns.extend(resource._get_url_patterns())
+        url_patterns = patterns('', *url_patterns)
+        return url_patterns
 
 
 class Conduit(object):
@@ -124,7 +152,7 @@ class ModelResource(Conduit):
         resource_uri = []
 
         # Grab the api portion
-        api = getattr(self, 'api', None)
+        api = getattr(self.Meta, 'api', None)
         if api:
             resource_uri.append(api.api_url)
 
@@ -143,6 +171,25 @@ class ModelResource(Conduit):
 
         resource_uri = '/'.join(resource_uri)
         return resource_uri
+
+    def _get_url_patterns(self):
+        resource_uri = self._get_resource_uri()
+        api = getattr(self.Meta, 'api')
+        patterns = []
+
+        # Generate list view
+        list_view_pattern = r'^{0}/$'.format(resource_uri)
+        list_view_name = '{0}-{1}-list'.format(api.name, self._get_resource_name())
+        list_view = url(list_view_pattern, self.as_view(), name=list_view_name)
+        patterns.append(list_view)
+
+        # Generate detail view
+        detail_view_pattern = r'^{0}/(?P<{1}>\w+)/$'.format(resource_uri, self.Meta.pk_field)
+        detail_view_name = '{0}-{1}-detail'.format(api.name, self._get_resource_name())
+        detail_view = url(detail_view_pattern, self.as_view(), name=detail_view_name)
+        patterns.append(detail_view)
+
+        return patterns
 
     def build_pub(self, request, *args, **kwargs):
         """
@@ -260,7 +307,7 @@ class ModelResource(Conduit):
         kwargs['objs'] = limit_instances
         kwargs['meta'] = {
             'total': total_instances.count(),
-            'limit': self.limit
+            'limit': self.Meta.limit
         }
         kwargs['status'] = 200
         return (request, args, kwargs)
@@ -288,7 +335,7 @@ class ModelResource(Conduit):
         for field in fields:
             if field.related:
                 related_data = kwargs['request_data'][field.attribute]
-                field.save_related(kwargs['objs'][0], related_data)
+                field.save_related(self, kwargs['objs'][0], related_data)
         return request, args, kwargs
 
     @match(match=['detail', 'delete'])
@@ -346,7 +393,7 @@ class ModelResource(Conduit):
         fields = self._get_explicit_fields()
         for bundle in kwargs['bundles']:
             for field in fields:
-                field.dehydrate(bundle)
+                field.dehydrate(self, bundle)
         return request, args, kwargs
 
     @avoid(avoid=['delete'])

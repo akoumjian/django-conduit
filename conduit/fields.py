@@ -25,7 +25,7 @@ class ForeignKeyField(APIField):
         self.attribute = attribute
         self.resource_cls = resource_cls
 
-    def dehydrate(self, bundle=None):
+    def dehydrate(self, parent_inst, bundle=None):
         """
         Dehydrates a related object by running methods on a related resource
         """
@@ -35,6 +35,9 @@ class ForeignKeyField(APIField):
         obj = getattr(bundle['obj'], self.attribute)
         kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
         resource = self.resource_cls()
+        # pass the resource instance the parent's api
+        # to generate correct resource uri's
+        resource.Meta.api = parent_inst.Meta.api
         for methodname in self.dehydrate_conduit:
             method = resource._get_method(methodname)
             (request, args, kwargs,) = method(resource, request, *args, **kwargs)
@@ -43,7 +46,7 @@ class ForeignKeyField(APIField):
         bundle['data'][self.attribute] = related_bundle['data']
         return bundle
 
-    def save_related(self, obj, rel_obj_data):
+    def save_related(self, parent_inst, obj, rel_obj_data):
         """
         Save the related object from data provided
         """
@@ -66,6 +69,7 @@ class ForeignKeyField(APIField):
             kwargs['pub'].extend(['post', 'list'])
 
         resource = self.resource_cls()
+        resource.Meta.api = parent_inst.Meta.api
         for methodname in self.save_conduit:
             method = resource._get_method(methodname)
             (request, args, kwargs,) = method(resource, request, *args, **kwargs)
@@ -100,7 +104,7 @@ class ManyToManyField(APIField):
         self.attribute = attribute
         self.resource_cls = resource_cls
 
-    def dehydrate(self, bundle=None):
+    def dehydrate(self, parent_inst, bundle=None):
         """
         Dehydrates a related object by running methods on a related resource
         """
@@ -110,6 +114,7 @@ class ManyToManyField(APIField):
         objs = getattr(bundle['obj'], self.attribute).all()
         kwargs = {'objs': objs, 'pub': ['list', 'get']}
         resource = self.resource_cls()
+        resource.Meta.api = parent_inst.Meta.api
         for methodname in self.dehydrate_conduit:
             method = resource._get_method(methodname)
             (request, args, kwargs,) = method(resource, request, *args, **kwargs)
@@ -120,7 +125,7 @@ class ManyToManyField(APIField):
         bundle['data'][self.attribute] = dehydrated_data
         return bundle
 
-    def save_related(self, obj, rel_obj_data):
+    def save_related(self, parent_inst, obj, rel_obj_data):
         """
         Save the related object from data provided
         """
@@ -147,6 +152,8 @@ class ManyToManyField(APIField):
                 kwargs['pub'].extend(['post', 'list'])
 
             resource = self.resource_cls()
+            resource.Meta.api = parent_inst.Meta.api
+            print resource.Meta.api
             for methodname in self.save_conduit:
                 method = resource._get_method(methodname)
                 (request, args, kwargs,) = method(resource, request, *args, **kwargs)
