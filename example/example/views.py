@@ -20,3 +20,9 @@ class FooResource(ModelResource):
 
     class Meta(ModelResource.Meta):
         model = Foo
+        allowed_filters = [
+            'created__gt',
+        ]
+        default_filters = {
+            'integer__gt': 11
+        }

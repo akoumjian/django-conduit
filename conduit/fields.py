@@ -1,7 +1,6 @@
 
 
 class APIField(object):
-    # def dehydrate(self, parent_obj=None, parent_data=None, attribute=None):
     pass
 
 

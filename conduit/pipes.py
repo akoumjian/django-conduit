@@ -100,6 +100,7 @@ class ModelResource(Conduit):
         conduit = (
             'build_pub',
             'get_object_from_kwargs',
+            'process_filters',
             'json_to_python',
             'check_permissions',
             'hydrate_request_data',
@@ -123,6 +124,12 @@ class ModelResource(Conduit):
         pk_field = 'id'
         limit = 20
         api = None
+        # Publically accessible filters designated by
+        # filter string
+        allowed_filters = []
+        # Filter keys and values that are always applied
+        # to get list requests
+        default_filters = {}
 
     def forbidden(self):
         response = HttpResponse('', status=403, content_type='application/json')
@@ -221,6 +228,23 @@ class ModelResource(Conduit):
         kwargs['objs'] = [instance]
         return (request, args, kwargs)
 
+    @subscribe(sub=['get'])
+    def process_filters(self, request, *args, **kwargs):
+        filters = {}
+        # Collect and check filters coming in through request
+        get_params = request.GET.copy()
+        for key, value in get_params.items():
+            if key not in self.Meta.allowed_filters:
+                response = HttpResponse('{0} is not an allowed filter'.format(key), status=400, content_type='application/json')
+                raise HttpInterrupt(response)
+            else:
+                filters[key] = value
+
+        # Add default filters
+        filters.update(self.Meta.default_filters)
+        kwargs['filters'] = filters
+        return (request, args, kwargs)
+
     def check_permissions(self, request, *args, **kwargs):
         return (request, args, kwargs)
 
@@ -303,7 +327,8 @@ class ModelResource(Conduit):
     def get_list(self, request, *args, **kwargs):
         cls = self.Meta.model
         total_instances = cls.objects.all()
-        limit_instances = total_instances[:self.Meta.limit]
+        filtered_instances = total_instances.filter(**kwargs['filters'])
+        limit_instances = filtered_instances[:self.Meta.limit]
         kwargs['objs'] = limit_instances
         kwargs['meta'] = {
             'total': total_instances.count(),
