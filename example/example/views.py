@@ -23,6 +23,10 @@ class FooResource(ModelResource):
         allowed_filters = [
             'created__gt',
         ]
+        allowed_ordering = [
+            'created',
+            '-created',
+        ]
         default_filters = {
-            'integer__gt': 11
+            # 'integer__gt': 11
         }

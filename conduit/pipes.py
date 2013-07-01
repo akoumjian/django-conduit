@@ -130,6 +130,10 @@ class ModelResource(Conduit):
         # Filter keys and values that are always applied
         # to get list requests
         default_filters = {}
+        # Allowed order_by strings
+        allowed_ordering = []
+        # Optional default ordering
+        default_ordering = None
 
     def forbidden(self):
         response = HttpResponse('', status=403, content_type='application/json')
@@ -230,9 +234,23 @@ class ModelResource(Conduit):
 
     @subscribe(sub=['get'])
     def process_filters(self, request, *args, **kwargs):
-        filters = {}
         # Collect and check filters coming in through request
         get_params = request.GET.copy()
+
+        # Remove special filters
+        order_by = get_params.get('order_by', self.Meta.default_ordering)
+        get_params.pop('order_by', None)
+        if order_by:
+            if order_by not in self.Meta.allowed_ordering:
+                message = '{0} is not a valid ordering'.format(order_by)
+                response = HttpResponse(message, status=400, content_type='application/json')
+            kwargs['order_by'] = order_by
+
+        # Add default filters
+        filters = {}
+        filters.update(self.Meta.default_filters)
+
+        # Update from request filters
         for key, value in get_params.items():
             if key not in self.Meta.allowed_filters:
                 response = HttpResponse('{0} is not an allowed filter'.format(key), status=400, content_type='application/json')
@@ -240,8 +258,6 @@ class ModelResource(Conduit):
             else:
                 filters[key] = value
 
-        # Add default filters
-        filters.update(self.Meta.default_filters)
         kwargs['filters'] = filters
         return (request, args, kwargs)
 
@@ -327,6 +343,11 @@ class ModelResource(Conduit):
     def get_list(self, request, *args, **kwargs):
         cls = self.Meta.model
         total_instances = cls.objects.all()
+        # apply ordering
+        if kwargs['order_by']:
+            total_instances = total_instances.order_by(kwargs['order_by'])
+        
+        # apply filtering
         filtered_instances = total_instances.filter(**kwargs['filters'])
         limit_instances = filtered_instances[:self.Meta.limit]
         kwargs['objs'] = limit_instances
