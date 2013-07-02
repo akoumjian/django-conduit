@@ -1,7 +1,7 @@
-from conduit.pipes import ModelResource
+from conduit.api import ModelResource
+from conduit.api.fields import ForeignKeyField, ManyToManyField
 from example.models import Foo, Bar, Baz
 from example.forms import FooForm
-from conduit.fields import ForeignKeyField, ManyToManyField
 
 
 class BarResource(ModelResource):

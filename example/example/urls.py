@@ -8,7 +8,7 @@ admin.autodiscover()
     # url(r'^foo/(?P<id>\d+)/$', FooResource.as_view(), name='foo-resource-detail'),
     # url(r'^admin/', include(admin.site.urls)),
 # )
-from conduit.pipes import Api
+from conduit.api import Api
 from example.views import FooResource
 
 api = Api()

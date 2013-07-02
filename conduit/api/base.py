@@ -1,26 +1,17 @@
-from importlib import import_module
 from django.http import HttpResponse
-from django.utils import simplejson
 from django.db.models.fields import FieldDoesNotExist
-from decimal import Decimal
 from django.db import models
-import logging
-from dateutil import parser
+from django.utils import simplejson
 from django.conf.urls import url, patterns
+from decimal import Decimal
+from dateutil import parser
+
+import logging
 logger = logging.getLogger(__name__)
 
+from conduit import Conduit
 from conduit.subscribe import subscribe, avoid, match
-
-
-class HttpInterrupt(Exception):
-    """
-    Raise when req/resp cycle should end early and serve response
-
-    ie: If an authorization fails, we can stop the conduit
-    and serve an error message
-    """
-    def __init__(self, response):
-        self.response = response or HttpResponse('No content')
+from conduit.exceptions import HttpInterrupt
 
 
 class Api(object):
@@ -48,47 +39,6 @@ class Api(object):
             url_patterns.extend(resource._get_url_patterns())
         url_patterns = patterns('', *url_patterns)
         return url_patterns
-
-
-class Conduit(object):
-    """
-    Runs a request through a conduit and returns a response
-    """
-    def _get_method(self, method_string):
-        method = getattr(self.__class__, method_string, None)
-        if not method:
-            pieces = method_string.split('.')
-            if len(pieces) < 2:
-                raise Exception('No such method found: {0}'.format(method_string))
-            module = '.'.join(pieces[:-2])
-            (cls, method,) = (pieces[-2], pieces[-1])
-            module = import_module(module)
-            cls = getattr(module, cls)
-            method = getattr(cls, method)
-        return method
-
-    @classmethod
-    def as_view(cls):
-        """
-        Returns a function for processing request response cycle
-        """
-
-        def view(request, *args, **kwargs):
-            """
-            Process the request, return a response
-            """
-            self = cls()
-            for method_string in self.Meta.conduit[:-1]:
-                method = self._get_method(method_string)
-                try:
-                    (request, args, kwargs,) = method(self, request, *args, **kwargs)
-                except HttpInterrupt as e:
-                    return e.response
-
-            response_method = self._get_method(self.Meta.conduit[-1])
-            return response_method(self, request, *args, **kwargs)
-
-        return view
 
 
 class ModelResource(Conduit):
@@ -407,6 +357,7 @@ class ModelResource(Conduit):
             for key, val in data.items():
                 if key not in fieldnames:
                     del data[key]
+            print data
             errors = []
             for obj in objs:
                 form = self.Meta.form_class(data, instance=obj)
