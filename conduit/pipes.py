@@ -1,6 +1,7 @@
 from importlib import import_module
 from django.http import HttpResponse
 from django.utils import simplejson
+from django.db.models.fields import FieldDoesNotExist
 from decimal import Decimal
 from django.db import models
 import logging
@@ -330,8 +331,13 @@ class ModelResource(Conduit):
 
         for data in data_dicts:
             for fieldname in data.keys():
-                model_field = self.Meta.model._meta.get_field(fieldname)
-                data[fieldname] = self._from_basic_type(model_field, data[fieldname])
+                try:
+                    model_field = self.Meta.model._meta.get_field(fieldname)
+                    data[fieldname] = self._from_basic_type(model_field, data[fieldname])
+                except FieldDoesNotExist:
+                    # We don't try to modify fields we don't know about
+                    # or artificial fields like resource_uri
+                    pass
         return request, args, kwargs
 
     @match(match=['get', 'detail'])
@@ -346,9 +352,10 @@ class ModelResource(Conduit):
         # apply ordering
         if kwargs['order_by']:
             total_instances = total_instances.order_by(kwargs['order_by'])
-        
+
         # apply filtering
         filtered_instances = total_instances.filter(**kwargs['filters'])
+
         limit_instances = filtered_instances[:self.Meta.limit]
         kwargs['objs'] = limit_instances
         kwargs['meta'] = {
