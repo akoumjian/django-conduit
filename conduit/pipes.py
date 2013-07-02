@@ -26,7 +26,6 @@ class HttpInterrupt(Exception):
 class Api(object):
     _resources = []
 
-
     def __init__(self, name='api', version='v1'):
         self.name = name
         self.version = version
@@ -103,17 +102,23 @@ class ModelResource(Conduit):
             'get_object_from_kwargs',
             'process_filters',
             'json_to_python',
-            'check_permissions',
             'hydrate_request_data',
+            'pre_get_list',
+            'auth_get_detail',
+            'auth_get_list',
+            'auth_put_detail',
+            'auth_put_list',
+            'auth_post_detail',
+            'auth_post_list',
+            'auth_delete_detail',
+            'auth_delete_list',
+            'form_validate',
             'get_detail',
             'get_list',
-            'post_detail',
             'put_detail',
             'post_list',
             'save_related_objs',
-            'put_list',
             'delete_detail',
-            'delete_list',
             'objs_to_bundles',
             'dehydrate_explicit_fields',
             'add_resource_uri',
@@ -262,9 +267,6 @@ class ModelResource(Conduit):
         kwargs['filters'] = filters
         return (request, args, kwargs)
 
-    def check_permissions(self, request, *args, **kwargs):
-        return (request, args, kwargs)
-
     @subscribe(sub=['post', 'put'])
     def json_to_python(self, request, *args, **kwargs):
         if request.body:
@@ -325,8 +327,8 @@ class ModelResource(Conduit):
         """
         # If updating/creating single object, we get a dict
         # change it to a list so we can place inside loop
-        data_dicts = kwargs['request_data']
-        if not isinstance(data_dicts, list):
+        data_dicts = kwargs.get('request_data', [])
+        if isinstance(data_dicts, dict):
             data_dicts = [data_dicts]
 
         for data in data_dicts:
@@ -340,6 +342,85 @@ class ModelResource(Conduit):
                     pass
         return request, args, kwargs
 
+    @match(match=['get', 'list'])
+    def pre_get_list(self, request, *args, **kwargs):
+        cls = self.Meta.model
+        total_instances = cls.objects.all()
+        # apply ordering
+        if 'order_by' in kwargs:
+            total_instances = total_instances.order_by(kwargs['order_by'])
+
+        # apply filtering
+        filtered_instances = total_instances.filter(**kwargs['filters'])
+        kwargs['objs'] = filtered_instances
+        kwargs['total_count'] = total_instances.count()
+        return (request, args, kwargs)
+
+    # Authorization hooks
+    # Also defines allowed methods!
+    @match(match=['get', 'detail'])
+    def auth_get_detail(self, request, *args, **kwargs):
+        return (request, args, kwargs)
+
+    @match(match=['get', 'list'])
+    def auth_get_list(self, request, *args, **kwargs):
+        return (request, args, kwargs)
+
+    @match(match=['put', 'detail'])
+    def auth_put_detail(self, request, *args, **kwargs):
+        return (request, args, kwargs)
+
+    @match(match=['put', 'detail'])
+    def auth_post_list(self, request, *args, **kwargs):
+        return (request, args, kwargs)
+
+    @match(match=['delete', 'detail'])
+    def auth_delete_detail(self, request, *args, **kwargs):
+        return (request, args, kwargs)
+
+    @match(match=['delete', 'list'])
+    def auth_delete_list(self, request, *args, **kwargs):
+        response = HttpResponse('', status=405, content_type='application/json')
+        raise HttpInterrupt(response)
+
+    @match(match=['post', 'detail'])
+    def auth_post_detail(self, request, *args, **kwargs):
+        response = HttpResponse('', status=405, content_type='application/json')
+        raise HttpInterrupt(response)
+
+    @match(match=['put', 'list'])
+    def auth_put_list(self, request, *args, **kwargs):
+        response = HttpResponse('', status=405, content_type='application/json')
+        raise HttpInterrupt(response)
+
+    @subscribe(sub=['post', 'put'])
+    def form_validate(self, request, *args, **kwargs):
+        form_class = getattr(self.Meta, 'form_class', None)
+        request_data = kwargs.get('request_data', {})
+        if form_class and request_data:
+            objs = kwargs.get('objs', [])
+
+            # Only send fields from request data that exist
+            # on model
+            data = request_data.copy()
+            fieldnames = self.Meta.model._meta.get_all_field_names()
+            for key, val in data.items():
+                if key not in fieldnames:
+                    del data[key]
+            errors = []
+            for obj in objs:
+                form = self.Meta.form_class(data, instance=obj)
+                if not form.is_valid():
+                    errors.append(form.errors)
+            if errors:
+                if len(errors) < 2:
+                    errors = errors[0]
+                errors_message = simplejson.dumps(errors)
+                response = HttpResponse(errors_message, status=400, content_type='application/json')
+                raise HttpInterrupt(response)
+
+        return (request, args, kwargs)
+
     @match(match=['get', 'detail'])
     def get_detail(self, request, *args, **kwargs):
         kwargs['status'] = 200
@@ -347,19 +428,11 @@ class ModelResource(Conduit):
 
     @match(match=['get', 'list'])
     def get_list(self, request, *args, **kwargs):
-        cls = self.Meta.model
-        total_instances = cls.objects.all()
-        # apply ordering
-        if kwargs['order_by']:
-            total_instances = total_instances.order_by(kwargs['order_by'])
-
-        # apply filtering
-        filtered_instances = total_instances.filter(**kwargs['filters'])
-
+        filtered_instances = kwargs['objs']
         limit_instances = filtered_instances[:self.Meta.limit]
         kwargs['objs'] = limit_instances
         kwargs['meta'] = {
-            'total': total_instances.count(),
+            'total': kwargs['total_count'],
             'limit': self.Meta.limit
         }
         kwargs['status'] = 200
@@ -398,21 +471,6 @@ class ModelResource(Conduit):
         instance.delete()
         kwargs['response'] = ''
         kwargs['status'] = 204
-        return (request, args, kwargs)
-
-    @match(match=['put', 'list'])
-    def put_list(self, request, *args, **kwargs):
-        kwargs['status'] = 501
-        return (request, args, kwargs)
-
-    @match(match=['post', 'detail'])
-    def post_detail(self, request, *args, **kwargs):
-        kwargs['status'] = 501
-        return (request, args, kwargs)
-
-    @match(match=['delete', 'list'])
-    def delete_list(self, request, *args, **kwargs):
-        kwargs['status'] = 501
         return (request, args, kwargs)
 
     @avoid(avoid=['delete'])

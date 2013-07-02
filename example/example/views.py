@@ -1,5 +1,6 @@
 from conduit.pipes import ModelResource
 from example.models import Foo, Bar, Baz
+from example.forms import FooForm
 from conduit.fields import ForeignKeyField, ManyToManyField
 
 
@@ -20,6 +21,7 @@ class FooResource(ModelResource):
 
     class Meta(ModelResource.Meta):
         model = Foo
+        form_class = FooForm
         allowed_filters = [
             'created__gt',
         ]
