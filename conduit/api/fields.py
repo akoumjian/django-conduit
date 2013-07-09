@@ -13,13 +13,15 @@ class ForeignKeyField(APIField):
     save_conduit = (
         'get_object_from_kwargs',
         'hydrate_request_data',
+        'initialize_new_object',
+        'save_fk_objs',
         'put_detail',
         'post_list',
-        'save_related_objs',
+        'save_m2m_objs',
     )
 
     def __init__(self, attribute=None, resource_cls=None):
-        self.related = True
+        self.related = 'fk'
         self.attribute = attribute
         self.resource_cls = resource_cls
 
@@ -73,12 +75,10 @@ class ForeignKeyField(APIField):
             (request, args, kwargs,) = method(resource, request, *args, **kwargs)
         # Grab the dehydrated data and place it on the parent's bundle
         related_obj = kwargs['objs'][0]
-
         # Now we have to update the FK reference on the original object
-        # save_related takes objs as list for uniformity with
-        # related fields that update multiple objects
+        # before saving
         setattr(obj, self.attribute, related_obj)
-        obj.save()
+
         return related_obj
 
 
@@ -91,13 +91,15 @@ class ManyToManyField(APIField):
     save_conduit = (
         'get_object_from_kwargs',
         'hydrate_request_data',
+        'initialize_new_object',
+        'save_fk_objs',
         'put_detail',
         'post_list',
-        'save_related_objs',
+        'save_m2m_objs',
     )
 
     def __init__(self, attribute=None, resource_cls=None):
-        self.related = True
+        self.related = 'm2m'
         self.attribute = attribute
         self.resource_cls = resource_cls
 

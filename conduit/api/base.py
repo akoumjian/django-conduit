@@ -65,9 +65,11 @@ class ModelResource(Conduit):
             'form_validate',
             'get_detail',
             'get_list',
+            'initialize_new_object',
+            'save_fk_objs',
             'put_detail',
             'post_list',
-            'save_related_objs',
+            'save_m2m_objs',
             'delete_detail',
             'objs_to_bundles',
             'dehydrate_explicit_fields',
@@ -389,6 +391,25 @@ class ModelResource(Conduit):
         kwargs['status'] = 200
         return (request, args, kwargs)
 
+    @subscribe(sub=['post', 'list'])
+    def initialize_new_object(self, request, *args, **kwargs):
+        # Before we attached foreign key objects, we have to have
+        # an initialized object
+        instance = self.Meta.model()
+        kwargs['objs'] = [instance]
+        return request, args, kwargs
+
+    @subscribe(sub=['post', 'put'])
+    def save_fk_objs(self, request, *args, **kwargs):
+        # ForeignKey objects must be created and attached to the parent obj
+        # before saving the parent object, since the field may not be nullable
+        fields = self._get_explicit_fields()
+        for field in fields:
+            if getattr(field, 'related', None) == 'fk':
+                related_data = kwargs['request_data'][field.attribute]
+                field.save_related(self, kwargs['objs'][0], related_data)
+        return request, args, kwargs
+
     @match(match=['put', 'detail'])
     def put_detail(self, request, *args, **kwargs):
         instance = self._update_from_dict(kwargs['objs'][0], kwargs['request_data'])
@@ -399,7 +420,7 @@ class ModelResource(Conduit):
 
     @match(match=['post', 'list'])
     def post_list(self, request, *args, **kwargs):
-        instance = self.Meta.model()
+        instance = kwargs['objs'][0]
         instance = self._update_from_dict(instance, kwargs['request_data'])
         instance.save()
         kwargs['objs'] = [instance]
@@ -407,10 +428,10 @@ class ModelResource(Conduit):
         return (request, args, kwargs)
 
     @subscribe(sub=['post', 'put'])
-    def save_related_objs(self, request, *args, **kwargs):
+    def save_m2m_objs(self, request, *args, **kwargs):
         fields = self._get_explicit_fields()
         for field in fields:
-            if field.related:
+            if getattr(field, 'related', None) == 'm2m':
                 related_data = kwargs['request_data'][field.attribute]
                 field.save_related(self, kwargs['objs'][0], related_data)
         return request, args, kwargs
@@ -517,7 +538,7 @@ class ModelResource(Conduit):
         for bundle in kwargs['bundles']:
             data_dicts.append(bundle['data'])
 
-        if 'detail' in kwargs['pub']:
+        if 'detail' in kwargs['pub'] or 'post' in kwargs['pub']:
             kwargs['response_data'] = data_dicts[0]
         else:
             kwargs['response_data'] = {
