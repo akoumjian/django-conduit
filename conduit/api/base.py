@@ -391,7 +391,7 @@ class ModelResource(Conduit):
         kwargs['status'] = 200
         return (request, args, kwargs)
 
-    @subscribe(sub=['post', 'list'])
+    @match(match=['post', 'list'])
     def initialize_new_object(self, request, *args, **kwargs):
         # Before we attached foreign key objects, we have to have
         # an initialized object
