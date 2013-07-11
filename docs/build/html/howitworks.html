@@ -1,0 +1,217 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Conduit Overview &mdash; django-conduit 0.0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="django-conduit 0.0.1 documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="index.html">django-conduit 0.0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="conduit-overview">
+<h1>Conduit Overview<a class="headerlink" href="#conduit-overview" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="what-is-a-conduit">
+<h2>What is a Conduit?<a class="headerlink" href="#what-is-a-conduit" title="Permalink to this headline">¶</a></h2>
+<p>Conduits are views that send requests through a simple list of functions to produce a response. This process is often called a pipeline (hence the name conduit). Here is an example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">conduit</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s">&#39;deserialize_json&#39;</span><span class="p">,</span>
+    <span class="s">&#39;run_form_validation&#39;</span><span class="p">,</span>
+    <span class="s">&#39;response&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Each of the items in the <tt class="docutils literal"><span class="pre">conduit</span></tt> tuple reference a method. Each method is called in succession. This is very similar to how Django&#8217;s <tt class="docutils literal"><span class="pre">MIDDLEWARE_CLASSES</span></tt> work. A conduit pipeline is specified in a <tt class="docutils literal"><span class="pre">Conduit</span></tt> view like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">FormView</span><span class="p">(</span><span class="n">Conduit</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple view for processing form input</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">MyForm</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">conduit</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s">&#39;deserialized_json_data&#39;</span><span class="p">,</span>
+            <span class="s">&#39;validate_form&#39;</span><span class="p">,</span>
+            <span class="s">&#39;process_data&#39;</span><span class="p">,</span>
+            <span class="s">&#39;response&#39;</span>
+        <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="conduit-methods">
+<h2>Conduit Methods<a class="headerlink" href="#conduit-methods" title="Permalink to this headline">¶</a></h2>
+<p>All functions in a conduit pipeline take the same four parameters as input.</p>
+<ol class="arabic">
+<li><dl class="first docutils">
+<dt>self</dt>
+<dd><p class="first last">The Conduit view instance</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>request</dt>
+<dd><p class="first last">The Django request object</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">*</span></a>args</dt>
+<dd><p class="first last">Capture variable number of arguments</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs</dt>
+<dd><p class="first last">Capture variable number of keyword arguments</p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>The methods also return these same values, though they may be modified in place. The only response that is different is the last, which must return a response, most likely an <tt class="docutils literal"><span class="pre">HttpResponse</span></tt>.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The last method in a conduit must return a response, such as HttpResponse</p>
+</div>
+</div>
+<div class="section" id="inheriting-extending">
+<h2>Inheriting &amp; Extending<a class="headerlink" href="#inheriting-extending" title="Permalink to this headline">¶</a></h2>
+<p>To inherit the conduit tuple from another <tt class="docutils literal"><span class="pre">Conduit</span></tt> view, your metaclass must do the inheriting. We can use a different form with the above view by inheriting its methods and conduit, while overriding its form_class:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">OtherFormView</span><span class="p">(</span><span class="n">FormView</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Process a different form</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">OtherForm</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">FormView</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+        <span class="k">pass</span>
+</pre></div>
+</div>
+<p>If you want to add or remove a step from another conduit, you must specify the new pipeline in its entirety. Here is a simple but not recommended example that extends our view from above by adding a <tt class="docutils literal"><span class="pre">publish_to_redis</span></tt> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">PublishFormView</span><span class="p">(</span><span class="n">FormView</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Process a form and publish event to redis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">OtherForm</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">conduit</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s">&#39;deserialized_json_data&#39;</span><span class="p">,</span>
+            <span class="s">&#39;validate_form&#39;</span><span class="p">,</span>
+            <span class="s">&#39;process_data&#39;</span><span class="p">,</span>
+            <span class="s">&#39;publish_to_redis&#39;</span><span class="p">,</span>
+            <span class="s">&#39;response&#39;</span>
+        <span class="p">)</span>
+</pre></div>
+</div>
+<p>In this example, we didn&#8217;t inherit the meta class since we were overriding conduit anyway.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Class inheritance is NOT the recommended way to customize your Conduit views.</p>
+</div>
+<p>While inheriting views, including multiple inheritance, is very familiar to Django developers, there is another more flexible way to extend your Conduit views. The methods in the conduit can reference any namespaced function, as long as they take the correct 4 input parameters.</p>
+<p>Using namespaced methods, the recommended way to create the above view would look like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">PublishFormView</span><span class="p">(</span><span class="n">Conduit</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Process a form and publish event to redis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">OtherForm</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">conduit</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s">&#39;myapp.views.FormView.deserialized_json_data&#39;</span><span class="p">,</span>
+            <span class="s">&#39;myapp.views.FormView.validate_form&#39;</span><span class="p">,</span>
+            <span class="s">&#39;myapp.views.FormView.process_data&#39;</span><span class="p">,</span>
+            <span class="s">&#39;publish_to_redis&#39;</span><span class="p">,</span>
+            <span class="s">&#39;myapp.views.FormView.response&#39;</span>
+        <span class="p">)</span>
+</pre></div>
+</div>
+<p>The advantage here over multiple inheritance is that the source of the methods is explicit. This makes debugging much easier.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Conduit Overview</a><ul>
+<li><a class="reference internal" href="#what-is-a-conduit">What is a Conduit?</a></li>
+<li><a class="reference internal" href="#conduit-methods">Conduit Methods</a></li>
+<li><a class="reference internal" href="#inheriting-extending">Inheriting &amp; Extending</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/howitworks.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="index.html">django-conduit 0.0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Alec Koumjian.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

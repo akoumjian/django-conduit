@@ -1,0 +1,71 @@
+.. django-conduit documentation master file, created by
+   sphinx-quickstart on Wed Jul 10 18:10:37 2013.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to django-conduit's documentation!
+==========================================
+
+``django-conduit`` is a RESTful API library for Django. Its primary goals are::
+
+#. Easy to Use
+#. Easy to Understand
+#. Easy to Extend
+
+Contents:
+
+.. toctree::
+   :maxdepth: 2
+
+API Quickstart
+==============
+
+#. Install via PyPI: ``pip install django-conduit``
+#. Add ``conduit`` to ``INSTALLED_APPS``
+#. Create or use an existing model in your ``[app]/models.py``
+#. Add the following resource to your ``[app]/views.py``::
+
+    from conduit.api import ModelResource
+    from [app].models import [Model]
+
+
+    class [Model]Resource(ModelResource):
+        class Meta(ModelResource.Meta):
+            model = [Model]
+
+#. Add the following to your ``urls.py``::
+
+    from conduit.api import Api
+    from [app].views import [Model]Resource
+
+    api = Api()
+    api.register([Model]Resource())
+
+    urlpatterns = patterns('',
+        url(r'^api/', include(api.urls)),
+        url(r'^admin/', include(admin.site.urls)),
+    )
+
+#. Visit ``localhost:8000/api/v1/[model]`` to fetch a list of your resource
+
+Next Steps
+----------
+
+* :doc:`How Do Conduit Views Work?<howitworks>`
+* :doc:`Related Resources<api/related>`
+* :doc:`Authorization & Access<api/auth>`
+
+
+
+
+
+
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+

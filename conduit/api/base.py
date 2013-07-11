@@ -17,9 +17,8 @@ from conduit.exceptions import HttpInterrupt
 class Api(object):
     _resources = []
 
-    def __init__(self, name='api', version='v1'):
+    def __init__(self, name='v1'):
         self.name = name
-        self.version = version
 
     def register(self, resource_instance):
         self._resources.append(resource_instance)
@@ -28,8 +27,6 @@ class Api(object):
     @property
     def api_url(self):
         url_bits = [self.name]
-        if self.version:
-            url_bits.append(self.version)
         return '/'.join(url_bits)
 
     @property
@@ -37,7 +34,7 @@ class Api(object):
         url_patterns = []
         for resource in self._resources:
             url_patterns.extend(resource._get_url_patterns())
-        url_patterns = patterns('', *url_patterns)
+        # url_patterns = patterns('', *url_patterns)
         return url_patterns
 
 
