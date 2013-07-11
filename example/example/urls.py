@@ -5,9 +5,12 @@ admin.autodiscover()
 
 from conduit.api import Api
 from example.views import FooResource
+# api = Api()
+# api.register(FooResource())
 
-api = Api()
-api.register(FooResource())
+## Experimental AutoAPI to quickly expose your projects resources
+# from conduit.api.utils import AutoAPI
+# api = AutoAPI()
 
 urlpatterns = patterns('',
     url(r'^api/', include(api.urls)),

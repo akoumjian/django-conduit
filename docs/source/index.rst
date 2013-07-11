@@ -51,7 +51,8 @@ API Quickstart
 Next Steps
 ----------
 
-* :doc:`How Do Conduit Views Work?<howitworks>`
+* :doc:`What Are Conduit Views?<howitworks>`
+* :doc:`Custom Fields & Methods`<api/customize>`
 * :doc:`Related Resources<api/related>`
 * :doc:`Authorization & Access<api/auth>`
 
