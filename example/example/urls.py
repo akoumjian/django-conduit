@@ -3,14 +3,14 @@ from django.conf.urls import patterns, include, url
 from django.contrib import admin
 admin.autodiscover()
 
-from conduit.api import Api
-from example.views import FooResource
+# from conduit.api import Api
+# from example.views import FooResource
 # api = Api()
 # api.register(FooResource())
 
 ## Experimental AutoAPI to quickly expose your projects resources
-# from conduit.api.utils import AutoAPI
-# api = AutoAPI()
+from conduit.api.utils import AutoAPI
+api = AutoAPI('example')
 
 urlpatterns = patterns('',
     url(r'^api/', include(api.urls)),

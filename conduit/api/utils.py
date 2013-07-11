@@ -1,18 +1,29 @@
-from django.db.models import get_app, get_apps, get_models
+from django.db.models.loading import load_app, get_app, get_apps, get_models
 from django.conf import settings
 
 from conduit.api import ModelResource
 from conduit.api import Api
+
 
 class AutoAPI(object):
     """
     Automatically create sample APIs from Django Apps or Models
     """
 
-    def __init__(self, apps=None):
+    def __init__(self, *app_names):
+        """
+        app_names: One or more fully qualified django app names
+
+        ie: api = AutoAPI('django.contrib.auth', 'example')
+        """
         self.api = Api()
-        if not apps:
-            # Add all the apps in settings if none are specified
+        apps = []
+        if app_names:
+            for app in app_names:
+                app = load_app(app)
+                apps.append(app)
+        else:
+            # Add all the apps if none are specified
             apps = get_apps()
         for app in apps:
             self.register_app(app)
