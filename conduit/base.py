@@ -1,5 +1,6 @@
 from importlib import import_module
 from conduit.exceptions import HttpInterrupt
+from django.db import transaction
 
 class Conduit(object):
     """
@@ -29,12 +30,13 @@ class Conduit(object):
             Process the request, return a response
             """
             self = cls()
-            for method_string in self.Meta.conduit[:-1]:
-                method = self._get_method(method_string)
-                try:
-                    (request, args, kwargs,) = method(self, request, *args, **kwargs)
-                except HttpInterrupt as e:
-                    return e.response
+            try:
+                with transaction.commit_on_success():
+                    for method_string in self.Meta.conduit[:-1]:
+                        method = self._get_method(method_string)
+                        (request, args, kwargs,) = method(self, request, *args, **kwargs)
+            except HttpInterrupt as e:
+                return e.response
 
             response_method = self._get_method(self.Meta.conduit[-1])
             return response_method(self, request, *args, **kwargs)

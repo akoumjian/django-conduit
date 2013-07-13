@@ -100,4 +100,4 @@ Using namespaced methods, the recommended way to create the above view would loo
                 'myapp.views.FormView.response'
             )
 
-The advantage here over multiple inheritance is that the source of the methods is explicit. This makes debugging much easier.
+The advantage here over multiple inheritance is that the source of the methods is made explicit. This makes debugging much easier if a little inconvenient.

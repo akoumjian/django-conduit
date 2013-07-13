@@ -1,8 +1,3 @@
-.. django-conduit documentation master file, created by
-   sphinx-quickstart on Wed Jul 10 18:10:37 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to django-conduit's documentation!
 ==========================================
 
@@ -17,11 +12,33 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-API Quickstart
-==============
+Hasty Start
+===========
+Use this to immediately start playing around with your models in API form. Don't use in production.
+
+#. In your main URLConf (urls.py), add the following::
+
+    from conduit.api.utils import AutoAPI
+    api = AutoAPI()
+
+    urlpatterns = patterns('',
+        ...
+        url(r'^api/', include(api.urls)),
+        ...
+    )
+
+#. Visit http://localhost:8000/api/v1/[yourmodelnamehere]
+
+You're done! The AutoAPI scans your Django project for all models and exposes them via an api. 
+
+.. warning:: DO NOT USE THIS IN PRODUCTION! It exposes all your project data.
+
+
+Quick Start
+===========
 
 #. Install via PyPI: ``pip install django-conduit``
-#. Add ``conduit`` to ``INSTALLED_APPS``
+.. #. Add ``conduit`` to ``INSTALLED_APPS``
 #. Create or use an existing model in your ``[app]/models.py``
 #. Add the following resource to your ``[app]/views.py``::
 
@@ -48,13 +65,15 @@ API Quickstart
 
 #. Visit ``localhost:8000/api/v1/[model]`` to fetch a list of your resource
 
+
 Next Steps
 ----------
 
-* :doc:`What Are Conduit Views?<howitworks>`
-* :doc:`Custom Fields & Methods`<api/customize>`
-* :doc:`Related Resources<api/related>`
+* :doc:`Conduit Views<howitworks>`
+* :doc:`ModelResource<api/modelresource>`
+* :doc:`Customizing Resources`<api/customize>`
 * :doc:`Authorization & Access<api/auth>`
+* :doc:`Related Resources<api/related>`
 
 
 
