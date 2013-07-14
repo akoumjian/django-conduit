@@ -45,6 +45,7 @@ class ModelResource(Conduit):
 
     class Meta:
         conduit = (
+            'check_allowed_methods',
             'build_pub',
             'get_object_from_kwargs',
             'process_filters',
@@ -77,8 +78,15 @@ class ModelResource(Conduit):
         )
         resource_name = None
         pk_field = 'id'
-        limit = 20
         api = None
+
+        # Default number of objects to return on
+        # get list requests
+        limit = 20
+
+        # List of allowed methods on a resource for simple
+        # authorization limits
+        allowed_methods = ['get', 'post', 'put', 'delete']
         # Publically accessible filters designated by
         # filter string
         allowed_filters = []
@@ -156,6 +164,13 @@ class ModelResource(Conduit):
         patterns.append(detail_view)
 
         return patterns
+
+    def check_allowed_methods(self, request, *args, **kwargs):
+        allowed_methods = getattr(self.Meta, 'allowed_methods', ['get', 'put', 'post', 'delete'])
+        if request.method.lower() not in allowed_methods:
+            response = HttpResponse('Method Not Allowed', status=405, content_type='application/json')
+            raise HttpInterrupt(response)
+        return request, args, kwargs
 
     def build_pub(self, request, *args, **kwargs):
         """

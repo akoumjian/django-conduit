@@ -2,6 +2,7 @@ from importlib import import_module
 from conduit.exceptions import HttpInterrupt
 from django.db import transaction
 
+
 class Conduit(object):
     """
     Runs a request through a conduit and returns a response
@@ -31,6 +32,9 @@ class Conduit(object):
             """
             self = cls()
             try:
+                # Wrap the request in a transaction
+                # If we see an exception (such as HttpInterrupt)
+                # all model changes will be rolled back
                 with transaction.commit_on_success():
                     for method_string in self.Meta.conduit[:-1]:
                         method = self._get_method(method_string)

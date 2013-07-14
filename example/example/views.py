@@ -24,7 +24,12 @@ class FooResource(ModelResource):
 
     class Meta(ModelResource.Meta):
         model = Foo
+
+        # Test allowed methods
+        # allowed_methods = ['get']
+
         form_class = FooForm
+
         allowed_filters = [
             'created__gt',
         ]
@@ -32,6 +37,8 @@ class FooResource(ModelResource):
             'created',
             '-created',
         ]
-        default_filters = {
-            # 'integer__gt': 11
-        }
+
+        # Test default filters
+        # default_filters = {
+        #     'integer__gt': 11
+        # }
