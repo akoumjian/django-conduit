@@ -214,6 +214,7 @@ class ModelResource(Conduit):
             if order_by not in self.Meta.allowed_ordering:
                 message = '{0} is not a valid ordering'.format(order_by)
                 response = HttpResponse(message, status=400, content_type='application/json')
+                raise HttpInterrupt(response)
             kwargs['order_by'] = order_by
 
         # Add default filters
@@ -287,7 +288,10 @@ class ModelResource(Conduit):
     @subscribe(sub=['post', 'put'])
     def hydrate_request_data(self, request, *args, **kwargs):
         """
-        Manipulate request data before updating objects
+        change basic types to python types ready for model fields
+
+        For example, change datetime strings to datetimes
+        Or decimal strings to decimals
         """
         # If updating/creating single object, we get a dict
         # change it to a list so we can place inside loop
@@ -308,6 +312,12 @@ class ModelResource(Conduit):
 
     @match(match=['get', 'list'])
     def pre_get_list(self, request, *args, **kwargs):
+        """
+        run against filters before authorization checks
+
+        Makes per object authorization checks faster by
+        limiting the instances it must iterate through
+        """
         cls = self.Meta.model
         total_instances = cls.objects.all()
         # apply ordering
@@ -371,7 +381,6 @@ class ModelResource(Conduit):
             for key, val in data.items():
                 if key not in fieldnames:
                     del data[key]
-            print data
             errors = []
             for obj in objs:
                 form = self.Meta.form_class(data, instance=obj)

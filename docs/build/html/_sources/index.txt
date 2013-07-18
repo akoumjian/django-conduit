@@ -1,16 +1,11 @@
 Welcome to django-conduit's documentation!
 ==========================================
 
-``django-conduit`` is a RESTful API library for Django. Its primary goals are::
+``django-conduit`` is a RESTful API library for Django. Its primary goals are:
 
 #. Easy to Use
 #. Easy to Understand
 #. Easy to Extend
-
-Contents:
-
-.. toctree::
-   :maxdepth: 2
 
 Hasty Start
 ===========
@@ -38,7 +33,6 @@ Quick Start
 ===========
 
 #. Install via PyPI: ``pip install django-conduit``
-.. #. Add ``conduit`` to ``INSTALLED_APPS``
 #. Create or use an existing model in your ``[app]/models.py``
 #. Add the following resource to your ``[app]/views.py``::
 
@@ -69,11 +63,12 @@ Quick Start
 Next Steps
 ----------
 
+
+* :doc:`Access & Authorization<access_authorization>`
 * :doc:`Conduit Views<howitworks>`
 * :doc:`ModelResource<api/modelresource>`
 * :doc:`Customizing Resources`<api/customize>`
 * :doc:`Related Resources<api/related>`
-* :doc:`Authorization & Access<api/auth>`
 
 
 

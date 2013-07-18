@@ -1,0 +1,60 @@
+Access, Authorization & Permissions
+===================================
+
+Django-Conduit provides several 'out of the box' ways to control access to your resources.
+
+Allowed Methods
+---------------
+
+One quick way to prevent create or update access to a resource is to limit the allowed http methods::
+
+	class FooResource(ModelResource):
+		class Meta(ModelResource.Meta):
+			model = Foo
+			allowed_methods = ['get']
+
+The above example will prevent sending put, post, or delete requests to the Foo Resource. Currently only 'get', 'put', 'post', and 'delete' are valid values.
+
+Authorization Hooks
+-------------------
+
+For granular permissions on individual objects, Django-Conduit provides a list of ready made hooks for you to implement your permission checks. The hook methods follow a naming pattern of ``auth_[method]_[list/detail]``. The method being the http method, and list/detail whether it is an action on a list url (``api/v1/foo``) or a detail url (``api/v1/foo/1``)
+
+It is entirely up to you how you want to handle permissions, but here are a couple suggestions. 
+
+#. Filter objects a user can retrieve based on ownership. Ownership is determined by the user specified in a owner field on the model::
+
+    @match(match=['get', 'list'])
+    def auth_get_list(self, request, *args, **kwargs):
+    	objs = kwargs['objs']
+    	objs = objs.filter(owner=request.user)
+        return (request, args, kwargs)
+
+#. Disable update access if a user does not own an object::
+
+    @match(match=['put', 'detail'])
+    def auth_put_detail(self, request, *args, **kwargs):
+    	# single obj is still found in 'objs' kwarg
+    	obj = kwargs['objs'][0]
+    	if request.user != obj.owner:
+    		# HttpInterrupt will immediately end processing
+    		# the request. Get it by:
+    		# from conduit.exceptions import HttpInterrupt
+            response = HttpResponse('', status=403)
+            raise HttpInterrupt(response)
+        return (request, args, kwargs)
+
+.. note:: It is important that you include the ``@match`` wrapper so that the check is only executed on the right requests. More about :doc:`Method Subscriptions<subscriptions>`
+
+Here is a full list of the authorization hook methods::
+
+    'auth_get_detail',
+    'auth_get_list',
+    'auth_put_detail',
+    'auth_put_list',
+    'auth_post_detail',
+    'auth_post_list',
+    'auth_delete_detail',
+    'auth_delete_list'
+
+Some of these already have checks, such as ``auth_put_list``, which will automatically raise an HttpInterrupt. This is because sending a PUT to a list endpoint is not a valid request.

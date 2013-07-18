@@ -44,16 +44,11 @@
   <div class="section" id="welcome-to-django-conduit-s-documentation">
 <h1>Welcome to django-conduit&#8217;s documentation!<a class="headerlink" href="#welcome-to-django-conduit-s-documentation" title="Permalink to this headline">¶</a></h1>
 <p><tt class="docutils literal"><span class="pre">django-conduit</span></tt> is a RESTful API library for Django. Its primary goals are:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="c">#. Easy to Use</span>
-<span class="c">#. Easy to Understand</span>
-<span class="c">#. Easy to Extend</span>
-</pre></div>
-</div>
-<p>Contents:</p>
-<div class="toctree-wrapper compound">
-<ul class="simple">
-</ul>
-</div>
+<ol class="arabic simple">
+<li>Easy to Use</li>
+<li>Easy to Understand</li>
+<li>Easy to Extend</li>
+</ol>
 </div>
 <div class="section" id="hasty-start">
 <h1>Hasty Start<a class="headerlink" href="#hasty-start" title="Permalink to this headline">¶</a></h1>
@@ -81,10 +76,12 @@ urlpatterns = patterns('',
 </div>
 <div class="section" id="quick-start">
 <h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h1>
-<p>#. Install via PyPI: <tt class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">django-conduit</span></tt>
-.. #. Add <tt class="docutils literal"><span class="pre">conduit</span></tt> to <tt class="docutils literal"><span class="pre">INSTALLED_APPS</span></tt>
-#. Create or use an existing model in your <tt class="docutils literal"><span class="pre">[app]/models.py</span></tt>
-#. Add the following resource to your <tt class="docutils literal"><span class="pre">[app]/views.py</span></tt>:</p>
+<ol class="arabic">
+<li><p class="first">Install via PyPI: <tt class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">django-conduit</span></tt></p>
+</li>
+<li><p class="first">Create or use an existing model in your <tt class="docutils literal"><span class="pre">[app]/models.py</span></tt></p>
+</li>
+<li><p class="first">Add the following resource to your <tt class="docutils literal"><span class="pre">[app]/views.py</span></tt>:</p>
 <div class="highlight-python"><pre>from conduit.api import ModelResource
 from [app].models import [Model]
 
@@ -93,7 +90,7 @@ class [Model]Resource(ModelResource):
     class Meta(ModelResource.Meta):
         model = [Model]</pre>
 </div>
-<ol class="arabic">
+</li>
 <li><p class="first">Add the following to your <tt class="docutils literal"><span class="pre">urls.py</span></tt>:</p>
 <div class="highlight-python"><pre>from conduit.api import Api
 from [app].views import [Model]Resource
@@ -113,11 +110,11 @@ urlpatterns = patterns('',
 <div class="section" id="next-steps">
 <h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
+<li><a class="reference internal" href="access_authorization.html"><em>Access &amp; Authorization</em></a></li>
 <li><a class="reference internal" href="howitworks.html"><em>Conduit Views</em></a></li>
 <li><tt class="xref doc docutils literal"><span class="pre">ModelResource</span></tt></li>
 <li><tt class="xref doc docutils literal"><span class="pre">Customizing</span> <span class="pre">Resources`</span></tt></li>
 <li><tt class="xref doc docutils literal"><span class="pre">Related</span> <span class="pre">Resources</span></tt></li>
-<li><tt class="xref doc docutils literal"><span class="pre">Authorization</span> <span class="pre">&amp;</span> <span class="pre">Access</span></tt></li>
 </ul>
 </div>
 </div>
@@ -138,9 +135,7 @@ urlpatterns = patterns('',
         <div class="sphinxsidebarwrapper">
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Welcome to django-conduit&#8217;s documentation!</a><ul>
-</ul>
-</li>
+<li><a class="reference internal" href="#">Welcome to django-conduit&#8217;s documentation!</a></li>
 <li><a class="reference internal" href="#hasty-start">Hasty Start</a></li>
 <li><a class="reference internal" href="#quick-start">Quick Start</a><ul>
 <li><a class="reference internal" href="#next-steps">Next Steps</a></li>
