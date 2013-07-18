@@ -16,12 +16,22 @@ from conduit.exceptions import HttpInterrupt
 
 class Api(object):
     _resources = []
+    # Reference attached resources by model type
+    _by_model = {}
 
     def __init__(self, name='v1'):
         self.name = name
 
     def register(self, resource_instance):
+        # Add to list of resources
         self._resources.append(resource_instance)
+        # Add to dict of resources by model name
+        model = resource_instance.Meta.model
+        model_resources = self._by_model.get(model, [])
+        model_resources.append(resource_instance)
+        self._by_model[model] = model_resources
+
+        # Attach the api to the resource instance
         resource_instance.Meta.api = self
 
     @property
