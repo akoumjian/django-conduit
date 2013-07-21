@@ -4,17 +4,20 @@ from conduit.api.fields import ForeignKeyField, ManyToManyField
 from conduit.subscribe import match
 from conduit.exceptions import HttpInterrupt
 from example.models import Foo, Bar, Baz
-from example.forms import FooForm
+from example.forms import FooForm, BarForm
 
 
 class BarResource(ModelResource):
     class Meta(ModelResource.Meta):
         model = Bar
+        # allowed_methods = ['get']
+        form_class = BarForm
 
 
 class BazResource(ModelResource):
     class Meta(ModelResource.Meta):
         model = Baz
+        # allowed_methods = ['get']
 
 
 class FooResource(ModelResource):

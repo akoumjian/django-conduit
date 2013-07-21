@@ -1,7 +1,7 @@
 import os
 import sys
 
-# Add django_pipes to PATH so we can import it
+# Add conduit to PATH so we can import it
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '../../')))
 
 # Django settings for example project.

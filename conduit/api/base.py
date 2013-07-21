@@ -18,6 +18,8 @@ class Api(object):
     _resources = []
     # Reference attached resources by model type
     _by_model = {}
+    # List model names by app models module
+    _app_models = {}
 
     def __init__(self, name='v1'):
         self.name = name
@@ -83,8 +85,7 @@ class ModelResource(Conduit):
             'dehydrate_explicit_fields',
             'add_resource_uri',
             'produce_response_data',
-            'serialize_response_data',
-            'response'
+            'return_response'
         )
         resource_name = None
         pk_field = 'id'
@@ -107,6 +108,11 @@ class ModelResource(Conduit):
         allowed_ordering = []
         # Optional default ordering
         default_ordering = None
+
+    def create_json_response(self, py_obj, status=200):
+        content = simplejson.dumps(py_obj)
+        response = HttpResponse(content=content, status=status, content_type='application/json')
+        return response
 
     def forbidden(self):
         response = HttpResponse('', status=403, content_type='application/json')
@@ -178,7 +184,8 @@ class ModelResource(Conduit):
     def check_allowed_methods(self, request, *args, **kwargs):
         allowed_methods = getattr(self.Meta, 'allowed_methods', ['get', 'put', 'post', 'delete'])
         if request.method.lower() not in allowed_methods:
-            response = HttpResponse('Method Not Allowed', status=405, content_type='application/json')
+            message = {'__all__': 'Method Not Allowed'}
+            response = self.create_json_response(py_obj=message, status=405)
             raise HttpInterrupt(response)
         return request, args, kwargs
 
@@ -207,7 +214,8 @@ class ModelResource(Conduit):
             }
             instance = cls.objects.get(**kwds)
         except cls.DoesNotExist:
-            response = HttpResponse('Object does not exist', status=404, content_type='application/json')
+            message = {'__all__': 'Object does not exist'}
+            response = self.create_json_response(py_obj=message, status=404)
             raise HttpInterrupt(response)
         kwargs['objs'] = [instance]
         return (request, args, kwargs)
@@ -221,9 +229,9 @@ class ModelResource(Conduit):
         order_by = get_params.get('order_by', self.Meta.default_ordering)
         get_params.pop('order_by', None)
         if order_by:
-            if order_by not in self.Meta.allowed_ordering:
-                message = '{0} is not a valid ordering'.format(order_by)
-                response = HttpResponse(message, status=400, content_type='application/json')
+            if order_by not in self.Meta.allowed_ordering or order_by not in self.Meta.default_ordering:
+                message = {'__all__': '{0} is not a valid ordering'.format(order_by)}
+                response = self.create_json_response(py_obj=message, status=400)
                 raise HttpInterrupt(response)
             kwargs['order_by'] = order_by
 
@@ -234,7 +242,8 @@ class ModelResource(Conduit):
         # Update from request filters
         for key, value in get_params.items():
             if key not in self.Meta.allowed_filters:
-                response = HttpResponse('{0} is not an allowed filter'.format(key), status=400, content_type='application/json')
+                message = {'__all__': '{0} is not an allowed filter'.format(key)}
+                self.create_json_response(py_obj=message, status=400)
                 raise HttpInterrupt(response)
             else:
                 filters[key] = value
@@ -364,12 +373,12 @@ class ModelResource(Conduit):
 
     @match(match=['delete', 'list'])
     def auth_delete_list(self, request, *args, **kwargs):
-        response = HttpResponse('', status=405, content_type='application/json')
+        self.create_json_response(py_obj='', status=405)
         raise HttpInterrupt(response)
 
     @match(match=['post', 'detail'])
     def auth_post_detail(self, request, *args, **kwargs):
-        response = HttpResponse('', status=405, content_type='application/json')
+        self.create_json_response(py_obj='', status=405)
         raise HttpInterrupt(response)
 
     @match(match=['put', 'list'])
@@ -397,10 +406,11 @@ class ModelResource(Conduit):
                 if not form.is_valid():
                     errors.append(form.errors)
             if errors:
-                if len(errors) < 2:
+                # If we are only validating one object do not
+                # return as array
+                if len(objs) < 2:
                     errors = errors[0]
-                errors_message = simplejson.dumps(errors)
-                response = HttpResponse(errors_message, status=400, content_type='application/json')
+                response = self.create_json_response(py_obj=errors, status=400)
                 raise HttpInterrupt(response)
 
         return (request, args, kwargs)
@@ -438,7 +448,14 @@ class ModelResource(Conduit):
         for field in fields:
             if getattr(field, 'related', None) == 'fk':
                 related_data = kwargs['request_data'][field.attribute]
-                field.save_related(self, kwargs['objs'][0], related_data)
+                try:
+                    field.save_related(request, self, kwargs['objs'][0], related_data)
+                except HttpInterrupt as e:
+                    # Raise the error but specify it as occuring within
+                    # the related field
+                    error_dict = {field.attribute: simplejson.loads(e.response.content)}
+                    response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                    raise HttpInterrupt(response)
         return request, args, kwargs
 
     @match(match=['put', 'detail'])
@@ -464,7 +481,14 @@ class ModelResource(Conduit):
         for field in fields:
             if getattr(field, 'related', None) == 'm2m':
                 related_data = kwargs['request_data'][field.attribute]
-                field.save_related(self, kwargs['objs'][0], related_data)
+                try:
+                    field.save_related(request, self, kwargs['objs'][0], related_data)
+                except HttpInterrupt as e:
+                    # Raise the error but specify it as occuring within
+                    # the related field
+                    error_dict = {field.attribute: simplejson.loads(e.response.content)}
+                    response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                    raise HttpInterrupt(response)
         return request, args, kwargs
 
     @match(match=['detail', 'delete'])
@@ -507,7 +531,7 @@ class ModelResource(Conduit):
         fields = self._get_explicit_fields()
         for bundle in kwargs['bundles']:
             for field in fields:
-                field.dehydrate(self, bundle)
+                field.dehydrate(request, self, bundle)
         return request, args, kwargs
 
     @avoid(avoid=['delete'])
@@ -578,10 +602,7 @@ class ModelResource(Conduit):
             }
         return (request, args, kwargs)
 
-    def serialize_response_data(self, request, *args, **kwargs):
-        response = kwargs.get('response_data', None)
-        kwargs['serialized'] = simplejson.dumps(response)
-        return (request, args, kwargs)
-
-    def response(self, request, *args, **kwargs):
-        return HttpResponse(kwargs['serialized'], status=kwargs['status'], content_type='application/json')
+    def return_response(self, request, *args, **kwargs):
+        response_data = kwargs.get('response_data', '')
+        response = self.create_json_response(py_obj=response_data, status=kwargs['status'])
+        return response

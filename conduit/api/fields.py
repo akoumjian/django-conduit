@@ -11,12 +11,14 @@ class ForeignKeyField(APIField):
     )
 
     save_conduit = (
+        'check_allowed_methods',
         'get_object_from_kwargs',
         'hydrate_request_data',
         'initialize_new_object',
         'save_fk_objs',
         'auth_put_detail',
         'auth_post_detail',
+        'form_validate',
         'put_detail',
         'post_list',
         'save_m2m_objs',
@@ -27,12 +29,11 @@ class ForeignKeyField(APIField):
         self.attribute = attribute
         self.resource_cls = resource_cls
 
-    def dehydrate(self, parent_inst, bundle=None):
+    def dehydrate(self, request, parent_inst, bundle=None):
         """
         Dehydrates a related object by running methods on a related resource
         """
         # build our request, args, kwargs to simulate regular request
-        request = None
         args = []
         obj = getattr(bundle['obj'], self.attribute)
         kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
@@ -48,11 +49,10 @@ class ForeignKeyField(APIField):
         bundle['data'][self.attribute] = related_bundle['data']
         return bundle
 
-    def save_related(self, parent_inst, obj, rel_obj_data):
+    def save_related(self, request, parent_inst, obj, rel_obj_data):
         """
         Save the related object from data provided
         """
-        request = None
         args = []
         kwargs = {
             'request_data': rel_obj_data,
@@ -91,12 +91,14 @@ class ManyToManyField(APIField):
     )
 
     save_conduit = (
+        'check_allowed_methods',
         'get_object_from_kwargs',
         'hydrate_request_data',
         'initialize_new_object',
         'save_fk_objs',
         'auth_put_detail',
         'auth_post_detail',
+        'form_validate',
         'put_detail',
         'post_list',
         'save_m2m_objs',
@@ -107,12 +109,11 @@ class ManyToManyField(APIField):
         self.attribute = attribute
         self.resource_cls = resource_cls
 
-    def dehydrate(self, parent_inst, bundle=None):
+    def dehydrate(self, request, parent_inst, bundle=None):
         """
         Dehydrates a related object by running methods on a related resource
         """
         # build our request, args, kwargs to simulate regular request
-        request = None
         args = []
         objs = getattr(bundle['obj'], self.attribute).all()
         kwargs = {'objs': objs, 'pub': ['list', 'get']}
@@ -128,7 +129,7 @@ class ManyToManyField(APIField):
         bundle['data'][self.attribute] = dehydrated_data
         return bundle
 
-    def save_related(self, parent_inst, obj, rel_obj_data):
+    def save_related(self, request, parent_inst, obj, rel_obj_data):
         """
         Save the related object from data provided
         """
@@ -136,7 +137,6 @@ class ManyToManyField(APIField):
         # as list!
         related_objs = []
         for obj_data in rel_obj_data:
-            request = None
             args = []
             kwargs = {
                 'request_data': obj_data,
