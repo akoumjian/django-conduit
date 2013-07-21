@@ -3,6 +3,8 @@ Access, Authorization & Permissions
 
 Django-Conduit provides several 'out of the box' ways to control access to your resources.
 
+.. note:: See the :doc:`Filtering & Ordering`<filtering_ordering>` guide to limit retrievable objected based on static values.
+
 Allowed Methods
 ---------------
 
@@ -58,3 +60,4 @@ Here is a full list of the authorization hook methods::
     'auth_delete_list'
 
 Some of these already have checks, such as ``auth_put_list``, which will automatically raise an HttpInterrupt. This is because sending a PUT to a list endpoint is not a valid request.
+

@@ -32,39 +32,34 @@ You're done! The AutoAPI scans your Django project for all models and exposes th
 Quick Start
 ===========
 
+Django-Conduit can autogenerate your api boilerplate to get you started.
+
 #. Install via PyPI: ``pip install django-conduit``
-#. Create or use an existing model in your ``[app]/models.py``
-#. Add the following resource to your ``[app]/views.py``::
+#. Add ``conduit`` to your ``INSTALLED_APPS``
+#. Generate your API app by running the following::
 
-    from conduit.api import ModelResource
-    from [app].models import [Model]
+    ./manage.py create_api [app1] [app2] --folder=api
 
+Where app1 and app2 are the names of your apps
 
-    class [Model]Resource(ModelResource):
-        class Meta(ModelResource.Meta):
-            model = [Model]
+#. Point your main URLconf to your new api app::
 
-#. Add the following to your ``urls.py``::
-
-    from conduit.api import Api
-    from [app].views import [Model]Resource
-
-    api = Api()
-    api.register([Model]Resource())
+    import api
 
     urlpatterns = patterns('',
+        ...
         url(r'^api/', include(api.urls)),
-        url(r'^admin/', include(admin.site.urls)),
+        ...
     )
 
-#. Visit ``localhost:8000/api/v1/[model]`` to fetch a list of your resource
+#. Visit ``localhost:8000/api/v1/[model_name]`` to fetch one of your new resources!
 
 
 Next Steps
 ----------
 
-
 * :doc:`Access & Authorization<access_authorization>`
+* :doc:`Filtering & Ordering<filtering_ordering>`
 * :doc:`Conduit Views<howitworks>`
 * :doc:`ModelResource<api/modelresource>`
 * :doc:`Customizing Resources`<api/customize>`
