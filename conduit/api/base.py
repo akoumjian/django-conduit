@@ -229,7 +229,7 @@ class ModelResource(Conduit):
         order_by = get_params.get('order_by', self.Meta.default_ordering)
         get_params.pop('order_by', None)
         if order_by:
-            if order_by not in self.Meta.allowed_ordering or order_by not in self.Meta.default_ordering:
+            if (order_by not in self.Meta.allowed_ordering) and (order_by != self.Meta.default_ordering):
                 message = {'__all__': '{0} is not a valid ordering'.format(order_by)}
                 response = self.create_json_response(py_obj=message, status=400)
                 raise HttpInterrupt(response)
@@ -243,7 +243,7 @@ class ModelResource(Conduit):
         for key, value in get_params.items():
             if key not in self.Meta.allowed_filters:
                 message = {'__all__': '{0} is not an allowed filter'.format(key)}
-                self.create_json_response(py_obj=message, status=400)
+                response = self.create_json_response(py_obj=message, status=400)
                 raise HttpInterrupt(response)
             else:
                 filters[key] = value
@@ -343,10 +343,10 @@ class ModelResource(Conduit):
         if 'order_by' in kwargs:
             total_instances = total_instances.order_by(kwargs['order_by'])
 
-        # apply filtering
+        
         filtered_instances = total_instances.filter(**kwargs['filters'])
         kwargs['objs'] = filtered_instances
-        kwargs['total_count'] = total_instances.count()
+        kwargs['total_count'] = filtered_instances.count()
         return (request, args, kwargs)
 
     # Authorization hooks
@@ -400,17 +400,12 @@ class ModelResource(Conduit):
             for key, val in data.items():
                 if key not in fieldnames:
                     del data[key]
-            errors = []
-            for obj in objs:
-                form = self.Meta.form_class(data, instance=obj)
-                if not form.is_valid():
-                    errors.append(form.errors)
-            if errors:
-                # If we are only validating one object do not
-                # return as array
-                if len(objs) < 2:
-                    errors = errors[0]
-                response = self.create_json_response(py_obj=errors, status=400)
+            if objs:
+                form = self.Meta.form_class(data, instance=objs[0])
+            else:
+                form = self.Meta.form_class(data)
+            if not form.is_valid():
+                response = self.create_json_response(py_obj=form.errors, status=400)
                 raise HttpInterrupt(response)
 
         return (request, args, kwargs)

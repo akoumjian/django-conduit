@@ -16,14 +16,14 @@ class SelfDescModelResource(ModelResource):
 
     def __to_string__(self):
         buff = ''
-        buff += '\nclass {0}Resource(ModelResource)'.format(self.Meta.model.__name__)
+        buff += '\nclass {0}Resource(ModelResource):'.format(self.Meta.model.__name__)
         buff += self.__meta_to_string__()
         buff += self.__fields_to_string__()
         return buff
 
     def __meta_to_string__(self):
         buff = ''
-        buff += '\n    class Meta(ModelResource.Meta)'
+        buff += '\n    class Meta(ModelResource.Meta):'
         buff += '\n        model = {0}'.format(self.Meta.model.__name__)
         return buff
 
@@ -34,12 +34,12 @@ class SelfDescModelResource(ModelResource):
         if not attributes:
             return ''
         fields = []
-        field_template = "{0} = {1}(attribute='{2}', resource_cls={3})"
+        field_template = "{0} = {1}(attribute='{2}', resource_cls={3}Resource)"
         for att in attributes:
             keyword = att[0]
             field_type = att[1].__class__.__name__
             field_att = att[1].attribute
-            field_res_cls = att[1].resource_cls.__name__
+            field_res_cls = att[1].resource_cls.Meta.model.__name__
             field_str = field_template.format(keyword, field_type, field_att, field_res_cls)
             fields.append(field_str)
 
@@ -91,7 +91,9 @@ class AutoAPI(object):
     def __urlconf_str__(self):
         buff = '## api/urls.py'
 
+        buff += '\nfrom django.conf.urls import patterns, include, url'
         buff += '\nfrom conduit.api import Api'
+
         # Resource import string
         import_tmp = '\nfrom api.views import {0}'
         res_names = [res.Meta.model.__name__ + 'Resource' for res in self.api._resources]
@@ -104,7 +106,7 @@ class AutoAPI(object):
 
         # Urlpatterns
         buff += "\n\nurlpatterns = patterns('',"
-        buff += "\n    url(r'^/', include(api.urls))"
+        buff += "\n    url(r'^', include(api.urls))"
         buff += "\n)"
         buff += '\n'
 
@@ -115,6 +117,8 @@ class AutoAPI(object):
 
         # Add improt strings
         resources_str += '\nfrom conduit.api import ModelResource'
+        resources_str += '\nfrom conduit.api.fields import ForeignKeyField, ManyToManyField'
+
         for app_name, models in self.api._app_models.items():
             resources_str += '\nfrom {0} import {1}'.format(app_name, ', '.join(models))
 

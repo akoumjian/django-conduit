@@ -4,6 +4,7 @@ from django.db import models
 class Bar(models.Model):
     name = models.CharField(max_length=250)
 
+
 class Baz(models.Model):
     name = models.CharField(max_length=250)
 
@@ -18,5 +19,5 @@ class Foo(models.Model):
     birthday = models.DateField(auto_now_add=True)
     decimal = models.DecimalField(max_digits=5, decimal_places=2)
     file_field = models.FileField(upload_to='test')
-    bar = models.ForeignKey(Bar)
+    bar = models.ForeignKey(Bar, null=True)
     bazzes = models.ManyToManyField(Baz)

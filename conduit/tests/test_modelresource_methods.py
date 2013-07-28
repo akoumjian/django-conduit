@@ -1,5 +1,6 @@
 import datetime, dateutil
 from decimal import Decimal
+from django import forms
 from conduit.api import ModelResource
 from conduit.exceptions import HttpInterrupt
 from example.models import Bar, Foo
@@ -76,7 +77,7 @@ class MethodTestCase(ConduitTestCase):
         kwargs = {
             'pub': ['get']
         }
-        request, args, kwargs = self.resource.process_filters(list_get, **kwargs)
+        request, args, kwargs = self.resource.process_filters(list_get, [], **kwargs)
         filters = kwargs['filters']
         self.assertEqual(filters.get('name__gte', None), 'beta', msg='Default filter was not included')
         self.assertEqual(filters.get('name__lte', None), 'delta', msg='Param filters should override default filters')
@@ -168,3 +169,110 @@ class MethodTestCase(ConduitTestCase):
         request, args, kwargs = self.resource.hydrate_request_data(post_list, **kwargs)
         self.assertEqual([post_hydrate_data], kwargs['request_data'])
 
+    def test_pre_get_list(self):
+        class FooResource(ModelResource):
+            class Meta(ModelResource.Meta):
+                model = Foo
+
+        foo_resource = FooResource()
+
+        # Create some instances to fetch from the orm
+        foo_fixtures = [
+            {   'name': 'alpha',
+                'text': '',
+                'integer': 1,
+                'float_field': 123.123,
+                'boolean': True,
+                'decimal': '12.34',
+                'file_field': 'test.mov',
+            },
+            {   'name': 'beta',
+                'text': '',
+                'integer': 8,
+                'float_field': 123.123,
+                'boolean': True,
+                'decimal': '12.34',
+                'file_field': 'test.mov',
+            },
+            {   'name': 'delta',
+                'text': '',
+                'integer': 5,
+                'float_field': 123.123,
+                'boolean': True,
+                'decimal': '12.34',
+                'file_field': 'test.mov',
+            },
+            {   'name': 'gamma',
+                'text': '',
+                'integer': 2,
+                'float_field': 123.123,
+                'boolean': True,
+                'decimal': '12.34',
+                'file_field': 'test.mov',
+            },
+            {   'name': 'zed',
+                'text': '',
+                'integer': 9,
+                'float_field': 123.123,
+                'boolean': True,
+                'decimal': '12.34',
+                'file_field': 'test.mov',
+            },
+        ]
+        for items in foo_fixtures:
+            foo = Foo(**items)
+            foo.save()
+
+        kwargs = {
+            'order_by': '-name',
+            # Should only return alpha, beta, delta
+            # Default-filtering will reduce down to
+            # alpha and delta
+            'filters': {
+                'name__lte': 'delta',
+                'integer__lte': 5
+            },
+            'pub': ['get', 'list']
+        }
+        get_list = self.factory.get('/foo/')
+        request, args, kwargs = foo_resource.pre_get_list(get_list, [], **kwargs)
+
+        # Make sure the objs keyword was populated
+        objs = kwargs.get('objs', False)
+
+        self.assertEqual(objs.count(), 2, msg='Filtering returned {0} and should have been 2'.format(objs.count()))
+
+        self.assertEqual(kwargs.get('total_count', None), 2)
+
+        prev_obj = None
+        for obj in objs:
+            if prev_obj:
+                self.assertTrue(obj.name <= prev_obj.name, msg='Objects should be ordered by -name')
+            prev_obj = obj
+
+    def test_form_validate(self):
+        class BarForm(forms.ModelForm):
+            class Meta:
+                model = Bar
+
+            def clean_name(self):
+                data = self.cleaned_data['name']
+                raise forms.ValidationError('Fake validation error', code='fake')
+                return data
+        self.resource.Meta.form_class = BarForm
+
+        kwargs = {
+            'pub': ['post', 'list'],
+            
+            'request_data': {
+                'name': 'whatevs',
+                'resource_uri': '/api/v1/bar/1',
+                'random_field': 'foobar'
+            }
+        }
+
+        post_list = self.factory.post('/bar/')
+
+        self.assertRaises(HttpInterrupt, self.resource.form_validate, post_list, [], **kwargs)
+
+        

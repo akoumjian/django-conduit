@@ -25,10 +25,15 @@ class Command(BaseCommand):
         if folder:
             wd = os.getcwd()
             api_folder = os.path.join(wd, 'api')
+            api_init = os.path.join(api_folder, '__init__.py')
             api_urls = os.path.join(api_folder, 'urls.py')
             api_views = os.path.join(api_folder, 'views.py')
 
             os.mkdir(api_folder)
+
+            # Create empty init file
+            with open(api_init, 'a') as f:
+                pass
 
             with open(api_urls, 'w') as f:
                 f.write(api.__urlconf_str__())
