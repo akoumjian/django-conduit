@@ -44,16 +44,12 @@ Django-Conduit can automatically create an api app for you based on your existin
         # 'api',
     )
 
-Note that we leave the api app commented out for now.
-
 #. Generate your API app by running the following::
 
-    ./manage.py create_api [app1] [app2] --folder=api
-
-Where app1 and app2 are the names of the apps you want included in your API.
+    ./manage.py create_api [name_of_your_app] --folder=api
 
 #. Uncomment 'api' in your INSTALLED_APPS
-#. Point your main URLconf to your new api app::
+#. Point your main URLconf to your new 'api' app::
 
     import api
 

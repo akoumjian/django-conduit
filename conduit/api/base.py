@@ -1,4 +1,5 @@
 from django.http import HttpResponse
+from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
 from django.utils import simplejson
@@ -139,44 +140,55 @@ class ModelResource(Conduit):
         return resource_name
 
     def _get_resource_uri(self, obj=None, data=None):
-        resource_uri = []
+        list_view_name, detail_view_name = self._get_view_names()
 
-        # Grab the api portion
-        api = getattr(self.Meta, 'api', None)
-        if api:
-            resource_uri.append(api.api_url)
-
-        # Get the resource portion
-        resource_uri.append(self._get_resource_name())
-
-        # Get the object portion
-        if obj:
-            pk = getattr(obj, self.Meta.pk_field, None)
-        elif data:
-            pk = data.get(self.Meta.pk_field, None)
-        else:
-            pk = None
-        if pk:
-            resource_uri.append(str(pk))
-
-        resource_uri = '/'.join(resource_uri)
+        try:
+            if obj:
+                resource_uri = reverse(detail_view_name, kwargs={self.Meta.pk_field: obj.pk})
+            else:
+                resource_uri = reverse(list_view_name)
+        except NoReverseMatch:
+            message = 'No reverse match found for view name "{0}". Resource instance may need reference to an Api instance if you are using one. e.g. resource_instance.api = Api(name="v1")'
+            if obj:
+                message = message.format(detail_view_name)
+            else:
+                message = message.format(list_view_name)
+            raise Exception(message)
         return resource_uri
 
+    def _get_view_names(self):
+        resource_name = self._get_resource_name()
+        list_view_name = '_'.join([resource_name, 'list'])
+        detail_view_name = '_'.join([resource_name, 'detail'])
+        api = getattr(self.Meta, 'api', None)
+        if api:
+            list_view_name = '_'.join([api.name, list_view_name])
+            detail_view_name = '_'.join([api.name, detail_view_name])
+        return list_view_name, detail_view_name
+
     def _get_url_patterns(self):
-        resource_uri = self._get_resource_uri()
-        api = getattr(self.Meta, 'api')
+        # Fetch the names of the views
+        # ie: v1_foo_list
+        list_view_name, detail_view_name = self._get_view_names()
+
+        # Create url patterns
+        # ie detail: r'foo/(?P<pk>\w+)/$
+        resource_pattern = []
+        api = getattr(self.Meta, 'api', None)
+        if api:
+            resource_pattern.append(api.api_url)
+        resource_pattern.append(self._get_resource_name())
+        resource_pattern = '/'.join(resource_pattern)
+        list_view_pattern = r'^{0}/$'.format(resource_pattern)
+        detail_view_pattern = r'^{0}/(?P<{1}>\w+)/$'.format(resource_pattern, self.Meta.pk_field)
+
+        # Form all the views
+        list_view = url(list_view_pattern, self.view, name=list_view_name)
+        detail_view = url(detail_view_pattern, self.view, name=detail_view_name)
+
+        # Return list of patterns
         patterns = []
-
-        # Generate list view
-        list_view_pattern = r'^{0}/$'.format(resource_uri)
-        list_view_name = '{0}-{1}-list'.format(api.name, self._get_resource_name())
-        list_view = url(list_view_pattern, self.as_view(), name=list_view_name)
         patterns.append(list_view)
-
-        # Generate detail view
-        detail_view_pattern = r'^{0}/(?P<{1}>\w+)/$'.format(resource_uri, self.Meta.pk_field)
-        detail_view_name = '{0}-{1}-detail'.format(api.name, self._get_resource_name())
-        detail_view = url(detail_view_pattern, self.as_view(), name=detail_view_name)
         patterns.append(detail_view)
 
         return patterns
@@ -343,7 +355,6 @@ class ModelResource(Conduit):
         if 'order_by' in kwargs:
             total_instances = total_instances.order_by(kwargs['order_by'])
 
-        
         filtered_instances = total_instances.filter(**kwargs['filters'])
         kwargs['objs'] = filtered_instances
         kwargs['total_count'] = filtered_instances.count()
@@ -373,12 +384,12 @@ class ModelResource(Conduit):
 
     @match(match=['delete', 'list'])
     def auth_delete_list(self, request, *args, **kwargs):
-        self.create_json_response(py_obj='', status=405)
+        response = self.create_json_response(py_obj='', status=405)
         raise HttpInterrupt(response)
 
     @match(match=['post', 'detail'])
     def auth_post_detail(self, request, *args, **kwargs):
-        self.create_json_response(py_obj='', status=405)
+        response = self.create_json_response(py_obj='', status=405)
         raise HttpInterrupt(response)
 
     @match(match=['put', 'list'])
@@ -506,7 +517,8 @@ class ModelResource(Conduit):
         bundles = []
         for obj in objs:
             obj_data = {}
-            for field in obj._meta.fields:
+            for fieldname in obj._meta.get_all_field_names():
+                field = obj._meta.get_field_by_name(fieldname)[0]
                 dehydrated_value = self._to_basic_type(obj, field)
                 obj_data[field.name] = dehydrated_value
 

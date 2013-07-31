@@ -156,7 +156,6 @@ class ManyToManyField(APIField):
 
             resource = self.resource_cls()
             resource.Meta.api = parent_inst.Meta.api
-            print resource.Meta.api
             for methodname in self.save_conduit:
                 method = resource._get_method(methodname)
                 (request, args, kwargs,) = method(resource, request, *args, **kwargs)

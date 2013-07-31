@@ -20,29 +20,29 @@ class Conduit(object):
             method = getattr(cls, method)
         return method
 
-    @classmethod
-    def as_view(cls):
+    # @classmethod
+    # def as_view(cls):
+        # """
+        # Returns a function for processing request response cycle
+        # """
+
+    def view(self, request, *args, **kwargs):
         """
-        Returns a function for processing request response cycle
+        Process the request, return a response
         """
+        # self = cls()
+        try:
+            # Wrap the request in a transaction
+            # If we see an exception (such as HttpInterrupt)
+            # all model changes will be rolled back
+            with transaction.commit_on_success():
+                for method_string in self.Meta.conduit[:-1]:
+                    method = self._get_method(method_string)
+                    (request, args, kwargs,) = method(self, request, *args, **kwargs)
+        except HttpInterrupt as e:
+            return e.response
 
-        def view(request, *args, **kwargs):
-            """
-            Process the request, return a response
-            """
-            self = cls()
-            try:
-                # Wrap the request in a transaction
-                # If we see an exception (such as HttpInterrupt)
-                # all model changes will be rolled back
-                with transaction.commit_on_success():
-                    for method_string in self.Meta.conduit[:-1]:
-                        method = self._get_method(method_string)
-                        (request, args, kwargs,) = method(self, request, *args, **kwargs)
-            except HttpInterrupt as e:
-                return e.response
+        response_method = self._get_method(self.Meta.conduit[-1])
+        return response_method(self, request, *args, **kwargs)
 
-            response_method = self._get_method(self.Meta.conduit[-1])
-            return response_method(self, request, *args, **kwargs)
-
-        return view
+        # return view

@@ -1,9 +1,12 @@
-import datetime, dateutil
+import datetime
+import dateutil
 from decimal import Decimal
 from django import forms
-from conduit.api import ModelResource
+from django.core.exceptions import ObjectDoesNotExist
+from conduit.api import ModelResource, Api
+from conduit.api.fields import ForeignKeyField, ManyToManyField
 from conduit.exceptions import HttpInterrupt
-from example.models import Bar, Foo
+from example.models import Bar, Foo, Baz
 from conduit.tests.testcases import ConduitTestCase
 
 
@@ -263,7 +266,6 @@ class MethodTestCase(ConduitTestCase):
 
         kwargs = {
             'pub': ['post', 'list'],
-            
             'request_data': {
                 'name': 'whatevs',
                 'resource_uri': '/api/v1/bar/1',
@@ -275,4 +277,261 @@ class MethodTestCase(ConduitTestCase):
 
         self.assertRaises(HttpInterrupt, self.resource.form_validate, post_list, [], **kwargs)
 
-        
+    def test_get_detail(self):
+        get_detail = self.factory.get('/foo/1/')
+        kwargs = {
+            'pub': ['get', 'detail']
+        }
+        request, args, kwargs = self.resource.get_detail(get_detail, [], **kwargs)
+        self.assertEqual(kwargs['status'], 200)
+
+    def test_get_list(self):
+        for name in ['one', 'two', 'three', 'four']:
+            self.resource.Meta.model(name=name).save()
+        self.resource.Meta.limit = 2
+        get_list = self.factory.get('/bar/')
+        kwargs = {
+            'pub': ['get', 'list'],
+            'objs': self.resource.Meta.model.objects.all(),
+            'total_count': self.resource.Meta.model.objects.all().count()
+        }
+        request, args, kwargs = self.resource.get_list(get_list, [], **kwargs)
+        objs = kwargs.get('objs', [])
+        self.assertEqual(objs.count(), 2)
+
+        test_meta = {
+            'total': 4,
+            'limit': 2
+        }
+        self.assertEqual(kwargs['meta'], test_meta)
+        self.assertEqual(kwargs['status'], 200)
+
+    def test_initialize_new_object(self):
+        kwargs = {
+            'pub': ['post', 'list']
+        }
+        post_list = self.factory.post('/bar/')
+        request, args, kwargs = self.resource.initialize_new_object(post_list, [], **kwargs)
+        obj = kwargs['objs'][0]
+        self.assertEqual(obj.__class__, self.resource.Meta.model)
+
+    def test_save_fk_objs(self):
+        class FooResource(ModelResource):
+            class Meta(ModelResource.Meta):
+                model = Foo
+            class Fields:
+                bar = ForeignKeyField(attribute='bar', resource_cls=self.resource.__class__)
+
+        foo_resource = FooResource()
+        foo = Foo(
+            **{ 'name': 'zed',
+                'text': '',
+                'integer': 9,
+                'float_field': 123.123,
+                'boolean': True,
+                'decimal': '12.34',
+                'file_field': 'test.mov',
+            }
+        )
+        foo.save()
+        post_list = self.factory.post('/foo/')
+        kwargs = {
+            'pub': ['post', 'list'],
+            'request_data': {
+                'name': 'foo name',
+                'bar': {
+                    'name': 'bar name'
+                }
+            },
+            'objs': [foo]
+        }
+        request, args, kwargs = foo_resource.save_fk_objs(post_list, [], **kwargs)
+        self.assertEqual(kwargs['objs'][0].bar.name, 'bar name')
+
+    def test_put_detail(self):
+        class FooResource(ModelResource):
+            class Meta(ModelResource.Meta):
+                model = Foo
+        foo_resource = FooResource()
+        foo = Foo(
+            **{ 'name': 'zed',
+                'text': '',
+                'integer': 9,
+                'float_field': 123.123,
+                'boolean': True,
+                'decimal': '12.34',
+                'file_field': 'test.mov',
+            }
+        )
+        foo.save()
+        data = {
+            'pub': ['put', 'detail'],
+            'objs': [foo],
+            'request_data': {
+                'name': 'bud',
+                'text': 'new text',
+                'integer': 25,
+                'float_field': 456.456,
+                'boolean': False,
+                'decimal': '30.12',
+                'file_field': 'test.pdf',
+            }
+        }
+        put_detail = self.factory.put('/foo/1/')
+        request, args, kwargs = foo_resource.put_detail(put_detail, [], **data)
+        obj = kwargs['objs'][0]
+        for field in data['request_data']:
+            self.assertEqual(getattr(obj, field), data['request_data'][field])
+
+    def test_post_list(self):
+        kwargs = {
+            'pub': ['post', 'list'],
+            'objs': [self.resource.Meta.model()],
+            'request_data': {
+                'name': 'new bar'
+            }
+        }
+        post_list = self.factory.post('/bar/')
+        request, args, kwargs = self.resource.post_list(post_list, [], **kwargs)
+        self.assertEqual(kwargs['objs'][0].name, kwargs['request_data']['name'])
+        self.assertEqual(kwargs['status'], 201)
+
+    def test_save_m2m_objs(self):
+        class BazResource(ModelResource):
+            class Meta(ModelResource.Meta):
+                model = Baz
+
+        class FooResource(ModelResource):
+            class Meta(ModelResource.Meta):
+                model = Foo
+            class Fields:
+                bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource)
+
+
+
+        foo_resource = FooResource()
+        foo = Foo(
+            **{ 'name': 'zed',
+                'text': '',
+                'integer': 9,
+                'float_field': 123.123,
+                'boolean': True,
+                'decimal': '12.34',
+                'file_field': 'test.mov',
+            }
+        )
+        foo.save()
+        post_list = self.factory.post('/foo/')
+        kwargs = {
+            'pub': ['post', 'list'],
+            'request_data': {
+                'name': 'foo name',
+                'bazzes': [
+                    {'name': 'baz 1'}, {'name': 'baz 2'}
+                ]
+            },
+            'objs': [foo]
+        }
+        request, args, kwargs = foo_resource.save_m2m_objs(post_list, [], **kwargs)
+        bazzes = kwargs['objs'][0].bazzes.all()
+        self.assertEqual(bazzes.count(), 2)
+
+    def test_delete_detail(self):
+        bar = self.resource.Meta.model(name='new bar')
+        bar.save()
+        kwargs = {
+            'pub': ['delete', 'detail'],
+            'objs': [bar]
+        }
+        delete_detail = self.factory.delete('/bar/1/')
+        request, args, kwargs = self.resource.delete_detail(delete_detail, [], **kwargs)
+        self.assertRaises(ObjectDoesNotExist, Bar.objects.get, pk=bar.id)
+
+    def test_objs_to_bundles(self):
+        class FooResource(ModelResource):
+            class Meta(ModelResource.Meta):
+                model = Foo
+        foo_resource = FooResource()
+        foo_dict = {
+            'name': 'zed',
+            'text': '',
+            'integer': 9,
+            'float_field': 123.123,
+            'boolean': True,
+            'decimal': '12.34',
+            'file_field': 'test.mov',
+        }
+        foo = Foo(**foo_dict)
+        foo.save()
+
+        kwargs = {
+            'pub': ['get', 'list'],
+            'objs': [foo]
+        }
+        get_list = self.factory.get('/foo/')
+        request, args, kwargs = foo_resource.objs_to_bundles(get_list, [], **kwargs)
+        bundle = kwargs['bundles'][0]
+        self.assertEqual(bundle['obj'], kwargs['objs'][0])
+        self.assertEqual(type(bundle['data']), dict)
+
+    def test_dehydrate_explicit_fields(self):
+        class BazResource(ModelResource):
+            class Meta(ModelResource.Meta):
+                model = Baz
+
+        class FooResource(ModelResource):
+            class Meta(ModelResource.Meta):
+                model = Foo
+
+            class Fields:
+                bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource)
+
+        foo_resource = FooResource()
+        foo_dict = {
+            'name': 'zed',
+            'text': '',
+            'integer': 9,
+            'float_field': 123.123,
+            'boolean': True,
+            'decimal': '12.34',
+            'file_field': 'test.mov',
+            }
+        foo = Foo(**foo_dict)
+        foo.save()
+        baz = Baz.objects.create(name='baz 1')
+        foo.bazzes.add(baz)
+
+        bundles = [{
+            'obj': foo,
+            'data': {}
+        }]
+
+        kwargs = {
+            'bundles': bundles,
+            'pub': ['get', 'detail']
+        }
+        get_detail = self.factory.get('/foo/1')
+        request, args, kwargs = foo_resource.dehydrate_explicit_fields(get_detail, [], **kwargs)
+
+        bazzes = kwargs['bundles'][0]['data']['bazzes']
+
+        self.assertTrue('name' in bazzes[0])
+
+    def test_add_resource_uri(self):
+        bar = Bar(name='new bar')
+        bar.save()
+        kwargs = {
+            'pub': ['get', 'list'],
+            'bundles': [{
+                'obj': bar,
+                'data': {}
+            }]
+        }
+        get_list = self.factory.get('/bar/')
+        request, args, kwargs = self.resource.add_resource_uri(get_list, [], **kwargs)
+
+        data = kwargs['bundles'][0]['data']
+        self.assertEqual(data['resource_uri'], 'bar/{0}'.format(bar.pk))
+
+    def test_get_resource_uri(self):
+
