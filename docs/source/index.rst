@@ -1,39 +1,23 @@
-Welcome to django-conduit's documentation!
-==========================================
+Django-Conduit
+==============
 
-``django-conduit`` is a RESTful API library for Django. Its primary goals are:
+Easy and powerful REST APIs for Django.
 
-#. Easy to Use
-#. Easy to Understand
-#. Easy to Extend
+Table of Contents
+=================
+.. toctree::
+   :maxdepth: 2
 
-Hasty Start
-===========
+   filtering_ordering
+   related
+   access_authorization
+   forms_validation
+   conduit
 
-.. warning:: DO NOT USE THIS IN PRODUCTION! It exposes all your project data.
+Getting Started
+===============
 
-Use this to immediately start playing around with your models in API form. Don't use in production.
-
-#. In your main URLConf (urls.py), add the following::
-
-    from conduit.api.utils import AutoAPI
-    api = AutoAPI()
-
-    urlpatterns = patterns('',
-        ...
-        url(r'^api/', include(api.urls)),
-        ...
-    )
-
-#. Visit http://localhost:8000/api/v1/[yourmodelnamehere]
-
-You're done! The AutoAPI scans your Django project for all models and exposes them via an api. 
-
-
-Quick Start
-===========
-
-Django-Conduit can automatically create an api app for you based on your existing models!
+Django-Conduit will automatically create your starting api based on your existing models.
 
 #. Install via PyPI: ``pip install django-conduit``
 #. Add the following to your INSTALLED_APPS::
@@ -49,7 +33,7 @@ Django-Conduit can automatically create an api app for you based on your existin
     ./manage.py create_api [name_of_your_app] --folder=api
 
 #. Uncomment 'api' in your INSTALLED_APPS
-#. Point your main URLconf to your new 'api' app::
+#. Point your main URLconf (normally project_name/urls.py) to your new 'api' app::
 
     import api
 
@@ -61,15 +45,19 @@ Django-Conduit can automatically create an api app for you based on your existin
 
 #. Visit ``localhost:8000/api/v1/[model_name]`` to fetch one of your new resources!
 
+All your new resources will be defined in api/views.py, and they will be registered with your Api object in api/urls.py.
+
+
+
 
 Topics
 ------
 
 * :doc:`Filtering & Ordering<filtering_ordering>`
-* :doc:`Related Resources<api/related>`
+* :doc:`Related Resources<related>`
 * :doc:`Access & Authorization<access_authorization>`
 * :doc:`Forms & Validation<forms_validation>`
-* :doc:`Conduit Views<howitworks>`
+* :doc:`Conduit Views<conduit>`
 * :doc:`ModelResource<api/modelresource>`
 * :doc:`Customizing Resources`<api/customize>`
 

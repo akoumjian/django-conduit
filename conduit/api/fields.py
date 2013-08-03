@@ -1,7 +1,18 @@
+from importlib import import_module
 
 
 class APIField(object):
     pass
+
+
+def import_class(resource_cls_str):
+    # import resource class dynamically
+    import_str = resource_cls_str.split('.')
+    module_str = '.'.join(import_str[:-1])
+    cls_str = import_str[-1]
+    module = import_module(module_str)
+    resource_cls = getattr(module, cls_str)
+    return resource_cls
 
 
 class ForeignKeyField(APIField):
@@ -24,35 +35,55 @@ class ForeignKeyField(APIField):
         'save_m2m_objs',
     )
 
-    def __init__(self, attribute=None, resource_cls=None):
+    def __init__(self, attribute=None, resource_cls=None, embed=False):
         self.related = 'fk'
         self.attribute = attribute
+        self.embed = embed
         self.resource_cls = resource_cls
+
+    def setup_resource(self):
+        """
+        Lazy load importing resource cls
+        """
+        # If we don't do this, imports will fail when trying
+        # to import resources in the same file as the related
+        # Field instantiation
+        # If we are passed the string rep of a resource
+        # class in python dot notation, import it
+        if isinstance(self.resource_cls, basestring):
+            self.resource_cls = import_class(self.resource_cls)
 
     def dehydrate(self, request, parent_inst, bundle=None):
         """
         Dehydrates a related object by running methods on a related resource
         """
+        self.setup_resource()
         # build our request, args, kwargs to simulate regular request
         args = []
         obj = getattr(bundle['obj'], self.attribute)
         kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
         resource = self.resource_cls()
-        # pass the resource instance the parent's api
-        # to generate correct resource uri's
         resource.Meta.api = parent_inst.Meta.api
-        for methodname in self.dehydrate_conduit:
-            method = resource._get_method(methodname)
-            (request, args, kwargs,) = method(resource, request, *args, **kwargs)
-        # Grab the dehydrated data and place it on the parent's bundle
-        related_bundle = kwargs['bundles'][0]
-        bundle['data'][self.attribute] = related_bundle['data']
+
+        ## Only run dehydrate if we are embedding the resource
+        if self.embed:
+            for methodname in self.dehydrate_conduit:
+                method = resource._get_method(methodname)
+                (request, args, kwargs,) = method(resource, request, *args, **kwargs)
+            # Grab the dehydrated data and place it on the parent's bundle
+            related_bundle = kwargs['bundles'][0]
+            bundle['data'][self.attribute] = related_bundle['data']
+        ## By default we just include the resource uri
+        else:
+            resource_uri = resource._get_resource_uri(obj=obj)
+            bundle['data'][self.attribute] = resource_uri
         return bundle
 
     def save_related(self, request, parent_inst, obj, rel_obj_data):
         """
         Save the related object from data provided
         """
+        self.setup_resource()
         args = []
         kwargs = {
             'request_data': rel_obj_data,
@@ -104,28 +135,49 @@ class ManyToManyField(APIField):
         'save_m2m_objs',
     )
 
-    def __init__(self, attribute=None, resource_cls=None):
+    def __init__(self, attribute=None, resource_cls=None, embed=False):
         self.related = 'm2m'
         self.attribute = attribute
+        self.embed = embed
         self.resource_cls = resource_cls
+
+    def setup_resource(self):
+        """
+        Lazy load importing resource cls
+        """
+        # If we don't do this, imports will fail when trying
+        # to import resources in the same file as the related
+        # Field instantiation
+        # If we are passed the string rep of a resource
+        # class in python dot notation, import it
+        if isinstance(self.resource_cls, basestring):
+            self.resource_cls = import_class(self.resource_cls)
 
     def dehydrate(self, request, parent_inst, bundle=None):
         """
         Dehydrates a related object by running methods on a related resource
         """
+        self.setup_resource()
         # build our request, args, kwargs to simulate regular request
         args = []
         objs = getattr(bundle['obj'], self.attribute).all()
         kwargs = {'objs': objs, 'pub': ['list', 'get']}
         resource = self.resource_cls()
         resource.Meta.api = parent_inst.Meta.api
-        for methodname in self.dehydrate_conduit:
-            method = resource._get_method(methodname)
-            (request, args, kwargs,) = method(resource, request, *args, **kwargs)
 
-        dehydrated_data = []
-        for related_bundle in kwargs['bundles']:
-            dehydrated_data.append(related_bundle['data'])
+        if self.embed:
+            for methodname in self.dehydrate_conduit:
+                method = resource._get_method(methodname)
+                (request, args, kwargs,) = method(resource, request, *args, **kwargs)
+
+            dehydrated_data = []
+            for related_bundle in kwargs['bundles']:
+                dehydrated_data.append(related_bundle['data'])
+        else:
+            dehydrated_data = []
+            for obj in objs:
+                resource_uri = resource._get_resource_uri(obj=obj)
+                dehydrated_data.append(resource_uri)
         bundle['data'][self.attribute] = dehydrated_data
         return bundle
 
@@ -133,6 +185,7 @@ class ManyToManyField(APIField):
         """
         Save the related object from data provided
         """
+        self.setup_resource()
         # For ManyToMany, rel_obj_data should be formatted
         # as list!
         related_objs = []

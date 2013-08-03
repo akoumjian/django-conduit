@@ -27,6 +27,7 @@ class MethodTestCase(ConduitTestCase):
                     '-name',
                 ]
         self.resource = TestResource()
+        self.resource.Meta.api = Api(name='v1')
 
     def test_allowed_methods(self):
         # Limit allowed methods to get and put
@@ -367,7 +368,7 @@ class MethodTestCase(ConduitTestCase):
         data = {
             'pub': ['put', 'detail'],
             'objs': [foo],
-            'request_data': {
+            'request_data': [{
                 'name': 'bud',
                 'text': 'new text',
                 'integer': 25,
@@ -375,25 +376,25 @@ class MethodTestCase(ConduitTestCase):
                 'boolean': False,
                 'decimal': '30.12',
                 'file_field': 'test.pdf',
-            }
+            }]
         }
         put_detail = self.factory.put('/foo/1/')
         request, args, kwargs = foo_resource.put_detail(put_detail, [], **data)
         obj = kwargs['objs'][0]
-        for field in data['request_data']:
-            self.assertEqual(getattr(obj, field), data['request_data'][field])
+        for field in data['request_data'][0]:
+            self.assertEqual(getattr(obj, field), data['request_data'][0][field])
 
     def test_post_list(self):
         kwargs = {
             'pub': ['post', 'list'],
             'objs': [self.resource.Meta.model()],
-            'request_data': {
+            'request_data': [{
                 'name': 'new bar'
-            }
+            }]
         }
         post_list = self.factory.post('/bar/')
         request, args, kwargs = self.resource.post_list(post_list, [], **kwargs)
-        self.assertEqual(kwargs['objs'][0].name, kwargs['request_data']['name'])
+        self.assertEqual(kwargs['objs'][0].name, kwargs['request_data'][0]['name'])
         self.assertEqual(kwargs['status'], 201)
 
     def test_save_m2m_objs(self):
@@ -478,13 +479,15 @@ class MethodTestCase(ConduitTestCase):
         class BazResource(ModelResource):
             class Meta(ModelResource.Meta):
                 model = Baz
+                api = Api(name='v1')
 
         class FooResource(ModelResource):
             class Meta(ModelResource.Meta):
                 model = Foo
+                api = Api(name='v1')
 
             class Fields:
-                bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource)
+                bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource, embed=True)
 
         foo_resource = FooResource()
         foo_dict = {
@@ -531,7 +534,5 @@ class MethodTestCase(ConduitTestCase):
         request, args, kwargs = self.resource.add_resource_uri(get_list, [], **kwargs)
 
         data = kwargs['bundles'][0]['data']
-        self.assertEqual(data['resource_uri'], 'bar/{0}'.format(bar.pk))
-
-    def test_get_resource_uri(self):
+        self.assertEqual(data['resource_uri'], '/api/{0}/bar/{1}/'.format(self.resource.Meta.api.name, bar.pk))
 

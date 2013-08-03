@@ -12,6 +12,8 @@ class BarResource(ModelResource):
 class BazResource(ModelResource):
     class Meta(ModelResource.Meta):
         model = Baz
+    # class Fields:
+        # foo_set = ManyToManyField(attribute='foo_set', resource_cls='api.views.FooResource')
 
 
 class FooResource(ModelResource):
@@ -19,4 +21,4 @@ class FooResource(ModelResource):
         model = Foo
     class Fields:
         bar = ForeignKeyField(attribute='bar', resource_cls=BarResource)
-        bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource)
+        bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource, embed=True)

@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Filtering and Ordering &mdash; django-conduit 0.0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="django-conduit 0.0.1 documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="index.html">django-conduit 0.0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="filtering-and-ordering">
+<h1>Filtering and Ordering<a class="headerlink" href="#filtering-and-ordering" title="Permalink to this headline">¶</a></h1>
+<p>During a get list view, it is useful to be able to filter or rearrange the results. Django-Conduit provides a few helpful properties and hooks to to filter your resources.</p>
+<div class="section" id="server-side-filters-to-limit-access">
+<h2>Server Side Filters to Limit Access<a class="headerlink" href="#server-side-filters-to-limit-access" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">default_filters</span></tt> dict on a ModelResource&#8217;s Meta class will apply the listed queryset filters before fetching results. The keys in <tt class="docutils literal"><span class="pre">default_filters</span></tt> ought to be a valid Queryset filter method for the specified model. Here is an example that only returns Foo objects that have a name starting with the the word &#8216;lamp&#8217;:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">FooResource</span><span class="p">(</span><span class="n">ModelResource</span><span class="p">):</span>
+        <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">ModelResource</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+                <span class="n">default_filters</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s">&#39;name__startswith&#39;</span><span class="p">:</span> <span class="s">&#39;lamp&#39;</span>
+                <span class="p">}</span>
+</pre></div>
+</div>
+<p>The default filters will eventually be applied to the queryset during the <tt class="docutils literal"><span class="pre">pre_get_list</span></tt> method, resulting in something like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">filtered_instances</span> <span class="o">=</span> <span class="n">Foo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name__startswith</span><span class="o">=</span><span class="s">&#39;lamp&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="client-side-filtering-with-get-params">
+<h2>Client Side Filtering with Get Params<a class="headerlink" href="#client-side-filtering-with-get-params" title="Permalink to this headline">¶</a></h2>
+<p>API consumers often need to be able to filter against certain resource fields using GET parameters. Filtering is enabled by specifying the <tt class="docutils literal"><span class="pre">allowed_filters</span></tt> array. The array takes a series of Queryset filter keywords:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">FooResource</span><span class="p">(</span><span class="n">ModelResource</span><span class="p">):</span>
+        <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">ModelResource</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+                <span class="n">allowed_filters</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="s">&#39;name__icontains&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;created__lte&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;created__gte&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;bar__name&#39;</span>
+                <span class="p">]</span>
+</pre></div>
+</div>
+<p>In the above example, API consumers will be allowed to get Foo objects by searching for strings in the Foo name, or by finding Foos created before or after a given datetime.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Each Queryset filter has to be specified using the entire filter name. While verbose, this allows custom or related field parameters such as <tt class="docutils literal"><span class="pre">bar__name</span></tt> to be easily specified.</p>
+</div>
+</div>
+<div class="section" id="ordering-results">
+<h2>Ordering Results<a class="headerlink" href="#ordering-results" title="Permalink to this headline">¶</a></h2>
+<p>If you want to specify the default order for objected, returned, you can simply specify the <tt class="docutils literal"><span class="pre">order_by</span></tt> string using the <tt class="docutils literal"><span class="pre">default_ordering</span></tt> Meta field:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">FooResource</span><span class="p">(</span><span class="n">ModelResource</span><span class="p">):</span>
+        <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">ModelResource</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+                <span class="n">default_ordering</span><span class="o">=</span><span class="s">&#39;-created&#39;</span>
+</pre></div>
+</div>
+<p>The value of <tt class="docutils literal"><span class="pre">default_ordering</span></tt> should be the same one you would use when performing order_by on a queryset. The above example will result in the following operation:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">Foo</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s">&#39;-created&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To allow API consumers to order the results, the <tt class="docutils literal"><span class="pre">allowed_ordering</span></tt> field is an array of valid ordering keys:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">FooResource</span><span class="p">(</span><span class="n">ModelResource</span><span class="p">):</span>
+        <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">ModelResource</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+                <span class="n">allowed_ordering</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="s">&#39;created&#39;</span><span class="p">,</span>
+                        <span class="s">&#39;-created&#39;</span>
+                <span class="p">]</span>
+</pre></div>
+</div>
+<p>Note how the forward and reverse string both have to be specified. This is to provide precise control over client ordering values.</p>
+</div>
+<div class="section" id="how-filters-ordering-are-applied">
+<h2>How Filters &amp; Ordering are Applied<a class="headerlink" href="#how-filters-ordering-are-applied" title="Permalink to this headline">¶</a></h2>
+<p>Filtering and ordering happens inside two steps in the default conduit pipeline. The first happens inside <tt class="docutils literal"><span class="pre">process_filters</span></tt>. To determine order, first the method looks for an order_by GET parameter. If none are specified, it defaults to the <tt class="docutils literal"><span class="pre">default_ordering</span></tt> attribute. If the order_by parameter is not a valid value, the client receives a 400.</p>
+<p>The filters start with the <tt class="docutils literal"><span class="pre">default_filters</span></tt> dictionary. This dictionary is then updated from filters specified in the GET parameters, provided they are specified in <tt class="docutils literal"><span class="pre">allowed_filters</span></tt>.</p>
+<p>After the order_by and filters are determined, their values are sent forward in the kwargs dictionary where they are picked up again in <tt class="docutils literal"><span class="pre">pre_get_list</span></tt>. This is the method that first applies the <tt class="docutils literal"><span class="pre">kwargs['order_by']</span></tt> value, and then applies the values inside <tt class="docutils literal"><span class="pre">kwargs['filters']</span></tt>. It stores the ordered and filtered queryset inside of <tt class="docutils literal"><span class="pre">kwargs['objs']</span></tt>. The objects are then subject to authorization limits and paginated inside <tt class="docutils literal"><span class="pre">get_list</span></tt> before the final set of objects is determined.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Filtering and Ordering</a><ul>
+<li><a class="reference internal" href="#server-side-filters-to-limit-access">Server Side Filters to Limit Access</a></li>
+<li><a class="reference internal" href="#client-side-filtering-with-get-params">Client Side Filtering with Get Params</a></li>
+<li><a class="reference internal" href="#ordering-results">Ordering Results</a></li>
+<li><a class="reference internal" href="#how-filters-ordering-are-applied">How Filters &amp; Ordering are Applied</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/filtering_ordering.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="index.html">django-conduit 0.0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Alec Koumjian.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

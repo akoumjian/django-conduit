@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Welcome to django-conduit’s documentation! &mdash; django-conduit 0.0.1 documentation</title>
+    <title>Django-Conduit &mdash; django-conduit 0.0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -23,7 +23,8 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="django-conduit 0.0.1 documentation" href="#" /> 
+    <link rel="top" title="django-conduit 0.0.1 documentation" href="#" />
+    <link rel="next" title="Filtering and Ordering" href="filtering_ordering.html" /> 
   </head>
   <body>
     <div class="related">
@@ -32,6 +33,9 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="filtering_ordering.html" title="Filtering and Ordering"
+             accesskey="N">next</a> |</li>
         <li><a href="#">django-conduit 0.0.1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -41,80 +45,87 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="welcome-to-django-conduit-s-documentation">
-<h1>Welcome to django-conduit&#8217;s documentation!<a class="headerlink" href="#welcome-to-django-conduit-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p><tt class="docutils literal"><span class="pre">django-conduit</span></tt> is a RESTful API library for Django. Its primary goals are:</p>
-<ol class="arabic simple">
-<li>Easy to Use</li>
-<li>Easy to Understand</li>
-<li>Easy to Extend</li>
-</ol>
+  <div class="section" id="django-conduit">
+<h1>Django-Conduit<a class="headerlink" href="#django-conduit" title="Permalink to this headline">¶</a></h1>
+<p>Easy and powerful REST APIs for Django.</p>
 </div>
-<div class="section" id="hasty-start">
-<h1>Hasty Start<a class="headerlink" href="#hasty-start" title="Permalink to this headline">¶</a></h1>
-<p>Use this to immediately start playing around with your models in API form. Don&#8217;t use in production.</p>
-<ol class="arabic">
-<li><p class="first">In your main URLConf (urls.py), add the following:</p>
-<div class="highlight-python"><pre>from conduit.api.utils import AutoAPI
-api = AutoAPI()
-
-urlpatterns = patterns('',
-    ...
-    url(r'^api/', include(api.urls)),
-    ...
-)</pre>
-</div>
+<div class="section" id="table-of-contents">
+<h1>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="filtering_ordering.html">Filtering and Ordering</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="filtering_ordering.html#server-side-filters-to-limit-access">Server Side Filters to Limit Access</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filtering_ordering.html#client-side-filtering-with-get-params">Client Side Filtering with Get Params</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filtering_ordering.html#ordering-results">Ordering Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filtering_ordering.html#how-filters-ordering-are-applied">How Filters &amp; Ordering are Applied</a></li>
+</ul>
 </li>
-<li><p class="first">Visit <a class="reference external" href="http://localhost:8000/api/v1/[yourmodelnamehere">http://localhost:8000/api/v1/[yourmodelnamehere</a>]</p>
+<li class="toctree-l1"><a class="reference internal" href="related.html">Related Resources &amp; Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="related.html#default-behavior">Default Behavior</a></li>
+<li class="toctree-l1"><a class="reference internal" href="related.html#related-resources">Related Resources</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="related.html#updating-related-resources">Updating Related Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="related.html#customizing-related-resource-fields">Customizing Related Resource Fields</a></li>
+</ul>
 </li>
-</ol>
-<p>You&#8217;re done! The AutoAPI scans your Django project for all models and exposes them via an api.</p>
-<div class="admonition warning">
-<p class="first admonition-title">Warning</p>
-<p class="last">DO NOT USE THIS IN PRODUCTION! It exposes all your project data.</p>
+<li class="toctree-l1"><a class="reference internal" href="access_authorization.html">Access, Authorization &amp; Permissions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="access_authorization.html#allowed-methods">Allowed Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="access_authorization.html#authorization-hooks">Authorization Hooks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="forms_validation.html">Forms &amp; Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conduit.html">Conduit Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="conduit.html#what-is-a-conduit">What is a Conduit?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conduit.html#conduit-methods">Conduit Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conduit.html#inheriting-extending">Inheriting &amp; Extending</a></li>
+</ul>
+</li>
+</ul>
 </div>
 </div>
-<div class="section" id="quick-start">
-<h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="getting-started">
+<h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<p>Django-Conduit will automatically create your starting api based on your existing models.</p>
 <ol class="arabic">
 <li><p class="first">Install via PyPI: <tt class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">django-conduit</span></tt></p>
 </li>
-<li><p class="first">Create or use an existing model in your <tt class="docutils literal"><span class="pre">[app]/models.py</span></tt></p>
-</li>
-<li><p class="first">Add the following resource to your <tt class="docutils literal"><span class="pre">[app]/views.py</span></tt>:</p>
-<div class="highlight-python"><pre>from conduit.api import ModelResource
-from [app].models import [Model]
-
-
-class [Model]Resource(ModelResource):
-    class Meta(ModelResource.Meta):
-        model = [Model]</pre>
-</div>
-</li>
-<li><p class="first">Add the following to your <tt class="docutils literal"><span class="pre">urls.py</span></tt>:</p>
-<div class="highlight-python"><pre>from conduit.api import Api
-from [app].views import [Model]Resource
-
-api = Api()
-api.register([Model]Resource())
-
-urlpatterns = patterns('',
-    url(r'^api/', include(api.urls)),
-    url(r'^admin/', include(admin.site.urls)),
+<li><p class="first">Add the following to your INSTALLED_APPS:</p>
+<div class="highlight-python"><pre>INSTALLED_APPS = (
+    ...
+    'conduit',
+    # 'api',
 )</pre>
 </div>
 </li>
-<li><p class="first">Visit <tt class="docutils literal"><span class="pre">localhost:8000/api/v1/[model]</span></tt> to fetch a list of your resource</p>
+<li><p class="first">Generate your API app by running the following:</p>
+<div class="highlight-python"><pre>./manage.py create_api [name_of_your_app] --folder=api</pre>
+</div>
+</li>
+<li><p class="first">Uncomment &#8216;api&#8217; in your INSTALLED_APPS</p>
+</li>
+<li><p class="first">Point your main URLconf (normally project_name/urls.py) to your new &#8216;api&#8217; app:</p>
+<div class="highlight-python"><pre>import api
+
+urlpatterns = patterns('',
+    ...
+    url(r'^api/', include(api.urls)),
+    ...
+)</pre>
+</div>
+</li>
+<li><p class="first">Visit <tt class="docutils literal"><span class="pre">localhost:8000/api/v1/[model_name]</span></tt> to fetch one of your new resources!</p>
 </li>
 </ol>
-<div class="section" id="next-steps">
-<h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
+<p>All your new resources will be defined in api/views.py, and they will be registered with your Api object in api/urls.py.</p>
+<div class="section" id="topics">
+<h2>Topics<a class="headerlink" href="#topics" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
+<li><a class="reference internal" href="filtering_ordering.html"><em>Filtering &amp; Ordering</em></a></li>
+<li><a class="reference internal" href="related.html"><em>Related Resources</em></a></li>
 <li><a class="reference internal" href="access_authorization.html"><em>Access &amp; Authorization</em></a></li>
-<li><a class="reference internal" href="howitworks.html"><em>Conduit Views</em></a></li>
+<li><a class="reference internal" href="forms_validation.html"><em>Forms &amp; Validation</em></a></li>
+<li><a class="reference internal" href="conduit.html"><em>Conduit Views</em></a></li>
 <li><tt class="xref doc docutils literal"><span class="pre">ModelResource</span></tt></li>
 <li><tt class="xref doc docutils literal"><span class="pre">Customizing</span> <span class="pre">Resources`</span></tt></li>
-<li><tt class="xref doc docutils literal"><span class="pre">Related</span> <span class="pre">Resources</span></tt></li>
 </ul>
 </div>
 </div>
@@ -135,15 +146,20 @@ urlpatterns = patterns('',
         <div class="sphinxsidebarwrapper">
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Welcome to django-conduit&#8217;s documentation!</a></li>
-<li><a class="reference internal" href="#hasty-start">Hasty Start</a></li>
-<li><a class="reference internal" href="#quick-start">Quick Start</a><ul>
-<li><a class="reference internal" href="#next-steps">Next Steps</a></li>
+<li><a class="reference internal" href="#">Django-Conduit</a></li>
+<li><a class="reference internal" href="#table-of-contents">Table of Contents</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#getting-started">Getting Started</a><ul>
+<li><a class="reference internal" href="#topics">Topics</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
 </ul>
 
+  <h4>Next topic</h4>
+  <p class="topless"><a href="filtering_ordering.html"
+                        title="next chapter">Filtering and Ordering</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/index.txt"
@@ -172,6 +188,9 @@ urlpatterns = patterns('',
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="filtering_ordering.html" title="Filtering and Ordering"
+             >next</a> |</li>
         <li><a href="#">django-conduit 0.0.1 documentation</a> &raquo;</li> 
       </ul>
     </div>

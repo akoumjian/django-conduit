@@ -44,6 +44,10 @@
   <div class="section" id="access-authorization-permissions">
 <h1>Access, Authorization &amp; Permissions<a class="headerlink" href="#access-authorization-permissions" title="Permalink to this headline">¶</a></h1>
 <p>Django-Conduit provides several &#8216;out of the box&#8217; ways to control access to your resources.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">See the <a class="reference internal" href="filtering_ordering.html"><em>Filtering &amp; Ordering`</em></a> guide to limit retrievable objected based on static values.</p>
+</div>
 <div class="section" id="allowed-methods">
 <h2>Allowed Methods<a class="headerlink" href="#allowed-methods" title="Permalink to this headline">¶</a></h2>
 <p>One quick way to prevent create or update access to a resource is to limit the allowed http methods:</p>
@@ -89,6 +93,18 @@
 <p class="first admonition-title">Note</p>
 <p class="last">It is important that you include the <tt class="docutils literal"><span class="pre">&#64;match</span></tt> wrapper so that the check is only executed on the right requests. More about <tt class="xref doc docutils literal"><span class="pre">Method</span> <span class="pre">Subscriptions</span></tt></p>
 </div>
+<p>Here is a full list of the authorization hook methods:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="s">&#39;auth_get_detail&#39;</span><span class="p">,</span>
+<span class="s">&#39;auth_get_list&#39;</span><span class="p">,</span>
+<span class="s">&#39;auth_put_detail&#39;</span><span class="p">,</span>
+<span class="s">&#39;auth_put_list&#39;</span><span class="p">,</span>
+<span class="s">&#39;auth_post_detail&#39;</span><span class="p">,</span>
+<span class="s">&#39;auth_post_list&#39;</span><span class="p">,</span>
+<span class="s">&#39;auth_delete_detail&#39;</span><span class="p">,</span>
+<span class="s">&#39;auth_delete_list&#39;</span>
+</pre></div>
+</div>
+<p>Some of these already have checks, such as <tt class="docutils literal"><span class="pre">auth_put_list</span></tt>, which will automatically raise an HttpInterrupt. This is because sending a PUT to a list endpoint is not a valid request.</p>
 </div>
 </div>
 

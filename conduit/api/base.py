@@ -120,6 +120,9 @@ class ModelResource(Conduit):
         raise HttpInterrupt(response)
 
     def _update_from_dict(self, instance, data):
+        """
+        Update all non-relational fields in place
+        """
         instance.__dict__.update(data)
         return instance
 
@@ -131,6 +134,19 @@ class ModelResource(Conduit):
                 if not fieldname.startswith('_'):
                     fields.append(field)
         return fields
+
+    def _get_model_fields(self, obj=None):
+        """
+        Get all Django model fields on an obj
+        """
+        if not obj:
+            obj = self.Meta.model
+        field_names = obj._meta.get_all_field_names()
+        real_fields = []
+        for field_name in field_names:
+            if hasattr(obj, field_name):
+                real_fields.append(field_name)
+        return real_fields
 
     def _get_resource_name(self):
         resource_name = getattr(self, 'resource_name', None)
@@ -148,7 +164,7 @@ class ModelResource(Conduit):
             else:
                 resource_uri = reverse(list_view_name)
         except NoReverseMatch:
-            message = 'No reverse match found for view name "{0}". Resource instance may need reference to an Api instance if you are using one. e.g. resource_instance.api = Api(name="v1")'
+            message = 'No reverse match found for view name "{0}". Resource instance may need reference to an Api instance if you are using one. e.g. resource_instance.Meta.api = Api(name="v1")'
             if obj:
                 message = message.format(detail_view_name)
             else:
@@ -339,6 +355,7 @@ class ModelResource(Conduit):
                     # We don't try to modify fields we don't know about
                     # or artificial fields like resource_uri
                     pass
+        kwargs['request_data'] = data_dicts
         return request, args, kwargs
 
     @match(match=['get', 'list'])
@@ -407,7 +424,7 @@ class ModelResource(Conduit):
             # Only send fields from request data that exist
             # on model
             data = request_data.copy()
-            fieldnames = self.Meta.model._meta.get_all_field_names()
+            fieldnames = self._get_model_fields()
             for key, val in data.items():
                 if key not in fieldnames:
                     del data[key]
@@ -466,7 +483,7 @@ class ModelResource(Conduit):
 
     @match(match=['put', 'detail'])
     def put_detail(self, request, *args, **kwargs):
-        instance = self._update_from_dict(kwargs['objs'][0], kwargs['request_data'])
+        instance = self._update_from_dict(kwargs['objs'][0], kwargs['request_data'][0])
         instance.save()
         kwargs['objs'] = [instance]
         kwargs['status'] = 201
@@ -475,7 +492,7 @@ class ModelResource(Conduit):
     @match(match=['post', 'list'])
     def post_list(self, request, *args, **kwargs):
         instance = kwargs['objs'][0]
-        instance = self._update_from_dict(instance, kwargs['request_data'])
+        instance = self._update_from_dict(instance, kwargs['request_data'][0])
         instance.save()
         kwargs['objs'] = [instance]
         kwargs['status'] = 201
@@ -517,10 +534,13 @@ class ModelResource(Conduit):
         bundles = []
         for obj in objs:
             obj_data = {}
-            for fieldname in obj._meta.get_all_field_names():
+            for fieldname in self._get_model_fields(obj):
+                # get_all_field_names() returns some non existant
+                # fields, like 'foo' when really
                 field = obj._meta.get_field_by_name(fieldname)[0]
+                
                 dehydrated_value = self._to_basic_type(obj, field)
-                obj_data[field.name] = dehydrated_value
+                obj_data[fieldname] = dehydrated_value
 
             bundles.append({
                 'obj': obj,

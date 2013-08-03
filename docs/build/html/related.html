@@ -1,0 +1,274 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Related Resources &amp; Objects &mdash; django-conduit 0.0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="django-conduit 0.0.1 documentation" href="index.html" />
+    <link rel="next" title="Access, Authorization &amp; Permissions" href="access_authorization.html" />
+    <link rel="prev" title="Filtering and Ordering" href="filtering_ordering.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="access_authorization.html" title="Access, Authorization &amp; Permissions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="filtering_ordering.html" title="Filtering and Ordering"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">django-conduit 0.0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="related-resources-objects">
+<h1>Related Resources &amp; Objects<a class="headerlink" href="#related-resources-objects" title="Permalink to this headline">¶</a></h1>
+<p><tt class="docutils literal"><span class="pre">django-conduit</span></tt> treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner.</p>
+</div>
+<div class="section" id="default-behavior">
+<h1>Default Behavior<a class="headerlink" href="#default-behavior" title="Permalink to this headline">¶</a></h1>
+<p>By default, conduit will serialize your model&#8217;s related object fields by their raw value. A ForeignKey field will produce the primary key of your related object. A ManyToMany field will product a list of primary keys.</p>
+<p>An example resource Foo has one FK and one M2M field:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">bar</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Bar</span><span class="p">)</span>
+        <span class="n">bazzes</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ManyToManyField</span><span class="p">(</span><span class="n">Baz</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Will produce a detail response looking like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+        <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;My Foo&quot;</span><span class="p">,</span>
+        <span class="s">&quot;bar&quot;</span><span class="p">:</span> <span class="mi">45</span><span class="p">,</span>
+        <span class="s">&quot;bazzes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">87</span><span class="p">,</span> <span class="mi">200</span><span class="p">],</span>
+        <span class="s">&quot;resource_uri&quot;</span><span class="p">:</span> <span class="s">&quot;/api/v1/foo/1/&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="related-resources">
+<h1>Related Resources<a class="headerlink" href="#related-resources" title="Permalink to this headline">¶</a></h1>
+<p>A much more useful approach is to point to a related ModelResource for your related fields. You can use a related resource by referencing it in the Fields metaclass. The below FooResource example using two related resource fields:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">FooResource</span><span class="p">(</span><span class="n">ModelResource</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">ModelResource</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Foo</span>
+    <span class="k">class</span> <span class="nc">Fields</span><span class="p">:</span>
+        <span class="n">bar</span> <span class="o">=</span> <span class="n">ForeignKeyField</span><span class="p">(</span><span class="n">attribute</span><span class="o">=</span><span class="s">&#39;bar&#39;</span><span class="p">,</span> <span class="n">resource_cls</span><span class="o">=</span><span class="s">&#39;api.views.BarResource&#39;</span><span class="p">)</span>
+        <span class="n">bazzes</span> <span class="o">=</span> <span class="n">ManyToManyField</span><span class="p">(</span><span class="n">attribute</span><span class="o">=</span><span class="s">&#39;bazzes&#39;</span><span class="p">,</span> <span class="n">resource_cls</span><span class="o">=</span><span class="s">&#39;api.views.BazResource&#39;</span><span class="p">,</span> <span class="n">embed</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">BarResource</span><span class="p">(</span><span class="n">ModelResource</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">ModelResource</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Bar</span>
+
+
+<span class="k">class</span> <span class="nc">BazResource</span><span class="p">(</span><span class="n">ModelResource</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">ModelResource</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Baz</span>
+</pre></div>
+</div>
+<p>Using a related resource lets you embed the entire resource data inside of the parent resource. One of the resources above is set to embed=True, while the other is not and will default to the <tt class="docutils literal"><span class="pre">resource_uri</span></tt>. An example of the above FooResource would look like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s">&quot;bar&quot;</span><span class="p">:</span> <span class="s">&quot;/api/v1/bar/23/&quot;</span><span class="p">,</span>
+    <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;stuffs&quot;</span><span class="p">,</span>
+    <span class="s">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s">&quot;bazzes&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s">&quot;resource_uri&quot;</span><span class="p">:</span> <span class="s">&quot;/api/v1/baz/1/&quot;</span><span class="p">,</span>
+            <span class="s">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;Baz 1&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="s">&quot;resource_uri&quot;</span><span class="p">:</span> <span class="s">&quot;/api/v1/baz/7/&quot;</span><span class="p">,</span>
+            <span class="s">&quot;id&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>
+            <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;Baz 7&quot;</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="s">&quot;resource_uri&quot;</span><span class="p">:</span> <span class="s">&quot;/api/v1/foo/1/&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="section" id="updating-related-resources">
+<h2>Updating Related Resources<a class="headerlink" href="#updating-related-resources" title="Permalink to this headline">¶</a></h2>
+<p>The <strong>real</strong> power of using related resources is that they follow the rules of the resource they point to. Using our previous example, let&#8217;s say you update one of the Baz objects in place and then send a PUT to our parent resource at <tt class="docutils literal"><span class="pre">/api/v1/foo/1/</span></tt>:</p>
+<div class="highlight-python"><pre>{
+        ...
+    "bazzes": [
+        {
+            "resource_uri": "/api/v1/baz/1/",
+            "id": 1,
+            "name": "MODIFIED BAZ NAME"
+        },
+        {
+            "resource_uri": "/api/v1/baz/7/",
+            "id": 7,
+            "name": "Baz 7"
+        }
+    ],
+    ...
+}</pre>
+</div>
+<p>The Baz object with id == 1 will now have the name &#8220;MODIFIED BAZ NAME&#8221; unless the BazResource determines the request is not authorized (using the methods described in <cite>Access &amp; Authorization&lt;access_authorization&gt;</cite>) or if the data doesn&#8217;t validate, etc.</p>
+<p>If you include data for a related resource without a primary key, it will created the related object for you and add it to the parent resource object. For example, if you send a PUT to our /api/v1/foo/1/ resource with the following data:</p>
+<div class="highlight-python"><pre>{
+        ...
+    "bazzes": [
+        {
+            "resource_uri": "/api/v1/baz/1/",
+            "id": 1,
+            "name": "MODIFIED BAZ NAME"
+        },
+        {
+            "resource_uri": "/api/v1/baz/7/",
+            "id": 7,
+            "name": "Baz 7"
+        },
+        {
+            "name": "New Baz"
+        }
+    ],
+    ...
+}</pre>
+</div>
+<p>The related BazResource will attempt to create a new Baz as if you had sent a POST to <tt class="docutils literal"><span class="pre">/api/v1/baz/</span></tt>. Then it will add the new Baz object to Foo&#8217;s ManyToMany field. In the return response, the object will be filled in with its new id and resource_uri.</p>
+<p>Similarly if you PUT to <tt class="docutils literal"><span class="pre">/api/v1/foo/1/</span></tt> and omit one of the existing Baz objects, it will remove it from the ManyToMany field. It will NOT delete the Baz object, however:</p>
+<div class="highlight-python"><pre>{
+        ...
+    "bazzes": [
+        {
+            "resource_uri": "/api/v1/baz/1/",
+            "id": 1,
+            "name": "MODIFIED BAZ NAME"
+        }
+    ],
+    ...
+}</pre>
+</div>
+<p>The above request will remove all but the Baz 1 object from Foo&#8217;s bazzes field.</p>
+</div>
+<div class="section" id="customizing-related-resource-fields">
+<h2>Customizing Related Resource Fields<a class="headerlink" href="#customizing-related-resource-fields" title="Permalink to this headline">¶</a></h2>
+<p>The default ForeignKeyField and ManyToManyField that ship with Conduit can easily be subclassed and customized. The fields work very similarly to ModelResources, except instead of a single Meta.conduit pipeline, they have two pipelines. One if for updating from request data, and the other is for fetching the existing resource.</p>
+<p>A subclassed FK field which adds a custom additional step to the pipeline would look like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">CustomForeignKeyField</span><span class="p">(</span><span class="n">ForeignKeyField</span><span class="p">):</span>
+    <span class="n">dehydrate_conduit</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s">&#39;objs_to_bundles&#39;</span><span class="p">,</span>
+        <span class="c">## Adds a custom step when grabbing and object</span>
+        <span class="c">## and turning it to json data</span>
+        <span class="s">&#39;myapp.resources.CustomResource.custom_method&#39;</span>
+        <span class="s">&#39;add_resource_uri&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">save_conduit</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s">&#39;check_allowed_methods&#39;</span><span class="p">,</span>
+        <span class="s">&#39;get_object_from_kwargs&#39;</span><span class="p">,</span>
+        <span class="s">&#39;hydrate_request_data&#39;</span><span class="p">,</span>
+        <span class="c">## Adds a custom step when preparing data</span>
+        <span class="c">## for updating / creating new object</span>
+        <span class="s">&#39;myapp.resources.CustomResource.custom_method&#39;</span>
+        <span class="s">&#39;initialize_new_object&#39;</span><span class="p">,</span>
+        <span class="s">&#39;save_fk_objs&#39;</span><span class="p">,</span>
+        <span class="s">&#39;auth_put_detail&#39;</span><span class="p">,</span>
+        <span class="s">&#39;auth_post_detail&#39;</span><span class="p">,</span>
+        <span class="s">&#39;form_validate&#39;</span><span class="p">,</span>
+        <span class="s">&#39;put_detail&#39;</span><span class="p">,</span>
+        <span class="s">&#39;post_list&#39;</span><span class="p">,</span>
+        <span class="s">&#39;save_m2m_objs&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Related Resources &amp; Objects</a></li>
+<li><a class="reference internal" href="#default-behavior">Default Behavior</a></li>
+<li><a class="reference internal" href="#related-resources">Related Resources</a><ul>
+<li><a class="reference internal" href="#updating-related-resources">Updating Related Resources</a></li>
+<li><a class="reference internal" href="#customizing-related-resource-fields">Customizing Related Resource Fields</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="filtering_ordering.html"
+                        title="previous chapter">Filtering and Ordering</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="access_authorization.html"
+                        title="next chapter">Access, Authorization &amp; Permissions</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/related.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="access_authorization.html" title="Access, Authorization &amp; Permissions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="filtering_ordering.html" title="Filtering and Ordering"
+             >previous</a> |</li>
+        <li><a href="index.html">django-conduit 0.0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Alec Koumjian.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>
