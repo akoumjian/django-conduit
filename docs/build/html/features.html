@@ -1,4 +1,3 @@
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -7,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Index &mdash; django-conduit 0.0.1 documentation</title>
+    <title>List of Features &mdash; django-conduit 0.0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -32,7 +31,7 @@
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
-          <a href="#" title="General Index"
+          <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li><a href="index.html">django-conduit 0.0.1 documentation</a> &raquo;</li> 
       </ul>
@@ -43,11 +42,18 @@
         <div class="bodywrapper">
           <div class="body">
             
-
-<h1 id="index">Index</h1>
-
-<div class="genindex-jumpbox">
- 
+  <div class="section" id="list-of-features">
+<h1>List of Features<a class="headerlink" href="#list-of-features" title="Permalink to this headline">¶</a></h1>
+<dl class="docutils">
+<dt>Transaction Support</dt>
+<dd>Each API request is wrapped in a transaction and rolls back any changes if an error occurs. For example, changes to an embedded resource may not be allowed. This raises a permissions error and any changes to the parent model instance will be reversed</dd>
+<dt>Easy to Follow Code</dt>
+<dd>Conduit&#8217;s flat and extendable design makes it incredibly easy to debug and tune for performance. The chain of events is meant to be explicit and atomic.</dd>
+<dt>Permissions and Authorization Hooks</dt>
+<dd><a class="reference internal" href="access_authorization.html"><em>Pre-made hooks</em></a> are available to filter or authorize resources based on whatever permissions you&#8217;re using.</dd>
+<dt><a class="reference internal" href="filtering_ordering.html"><em>Advanced Filtering &amp; Ordering</em></a></dt>
+<dd>Prefilter your resources on the serverside or use url parameters that match Django Queryset syntax.</dd>
+</dl>
 </div>
 
 
@@ -56,9 +62,11 @@
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
-
-   
-
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/features.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
@@ -80,7 +88,7 @@
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
-          <a href="#" title="General Index"
+          <a href="genindex.html" title="General Index"
              >index</a></li>
         <li><a href="index.html">django-conduit 0.0.1 documentation</a> &raquo;</li> 
       </ul>

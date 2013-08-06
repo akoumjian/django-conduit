@@ -12,6 +12,3 @@ Permissions and Authorization Hooks
 
 :doc:`Advanced Filtering & Ordering<filtering_ordering>`
 	Prefilter your resources on the serverside or use url parameters that match Django Queryset syntax.
-
-Intelligent Errors
-	Conduit returns from validation and other errors of resources and their embedded resources so that you know exactly where errors are occuring.

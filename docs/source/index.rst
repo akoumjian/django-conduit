@@ -7,7 +7,7 @@ Why Use Django-Conduit?
 -----------------------
 
 - Easy to read, easy to debug, easy to extend
-- Smart and efficient `Related Resources<related>`
+- Smart and efficient :doc:`Related Resources<related>`
 
 
 See the :doc:`full list of features<features>`.
@@ -22,6 +22,7 @@ Table of Contents
    access_authorization
    forms_validation
    conduit
+   about
 
 Getting Started
 ===============

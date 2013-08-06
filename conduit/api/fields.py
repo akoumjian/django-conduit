@@ -17,7 +17,10 @@ def import_class(resource_cls_str):
 
 class ForeignKeyField(APIField):
     dehydrate_conduit = (
+        'auth_get_detail',
+        'auth_get_list',
         'objs_to_bundles',
+        'dehydrate_explicit_fields',
         'add_resource_uri',
     )
 
@@ -117,7 +120,10 @@ class ForeignKeyField(APIField):
 
 class ManyToManyField(APIField):
     dehydrate_conduit = (
+        'auth_get_detail',
+        'auth_get_list',
         'objs_to_bundles',
+        'dehydrate_explicit_fields',
         'add_resource_uri',
     )
 

@@ -51,7 +51,7 @@
             
   <div class="section" id="related-resources-objects">
 <h1>Related Resources &amp; Objects<a class="headerlink" href="#related-resources-objects" title="Permalink to this headline">¶</a></h1>
-<p><tt class="docutils literal"><span class="pre">django-conduit</span></tt> treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner.</p>
+<p><tt class="docutils literal"><span class="pre">django-conduit</span></tt> treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner. You can use related resources to treat them similarly to related models, or you can default to their simple behavior as pointers to primary keys.</p>
 </div>
 <div class="section" id="default-behavior">
 <h1>Default Behavior<a class="headerlink" href="#default-behavior" title="Permalink to this headline">¶</a></h1>
@@ -72,9 +72,15 @@
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>When updating a ForeignKey field, conduit will set the model&#8217;s [field]_id to the integer you send it. Be careful not to set it to a nonexistent related model, since there are not constraint checks done when saved to the database.</p>
+<p>Similarly, when updated a ManyToMany field and give it a nonexistent primary key, the add will silently fail and the invalid primary key will not enter the ManyToMany list.</p>
+<div class="admonition important">
+<p class="first admonition-title">Important</p>
+<p class="last">Updating raw primary keys will not produce errors for invalid keys.</p>
 </div>
-<div class="section" id="related-resources">
-<h1>Related Resources<a class="headerlink" href="#related-resources" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="related-resource-fields">
+<h1>Related Resource Fields<a class="headerlink" href="#related-resource-fields" title="Permalink to this headline">¶</a></h1>
 <p>A much more useful approach is to point to a related ModelResource for your related fields. You can use a related resource by referencing it in the Fields metaclass. The below FooResource example using two related resource fields:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">FooResource</span><span class="p">(</span><span class="n">ModelResource</span><span class="p">):</span>
     <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">ModelResource</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
@@ -216,7 +222,7 @@
   <ul>
 <li><a class="reference internal" href="#">Related Resources &amp; Objects</a></li>
 <li><a class="reference internal" href="#default-behavior">Default Behavior</a></li>
-<li><a class="reference internal" href="#related-resources">Related Resources</a><ul>
+<li><a class="reference internal" href="#related-resource-fields">Related Resource Fields</a><ul>
 <li><a class="reference internal" href="#updating-related-resources">Updating Related Resources</a></li>
 <li><a class="reference internal" href="#customizing-related-resource-fields">Customizing Related Resource Fields</a></li>
 </ul>
