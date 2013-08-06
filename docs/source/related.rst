@@ -1,7 +1,7 @@
 Related Resources & Objects
 ===========================
 
-``django-conduit`` treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner.
+``django-conduit`` treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner. You can use related resources to treat them similarly to related models, or you can default to their simple behavior as pointers to primary keys.
 
 Default Behavior
 ================
@@ -23,6 +23,13 @@ Will produce a detail response looking like this::
 		"bazzes": [5, 87, 200],
 		"resource_uri": "/api/v1/foo/1/"
 	}
+
+When updating a ForeignKey field, conduit will set the model's [field]_id to the integer you send it. Be careful not to set it to a nonexistent related model, since there are not constraint checks done when saved to the database.
+
+Similarly, when updated a ManyToMany field and give it a nonexistent primary key, the add will silently fail and the invalid primary key will not enter the ManyToMany list.
+
+.. important:: Updating raw primary keys will not produce errors for invalid keys. 
+
 
 Related Resource Fields
 =======================

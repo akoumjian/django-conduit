@@ -47,7 +47,6 @@ class Api(object):
         url_patterns = []
         for resource in self._resources:
             url_patterns.extend(resource._get_url_patterns())
-        # url_patterns = patterns('', *url_patterns)
         return url_patterns
 
 
@@ -135,6 +134,13 @@ class ModelResource(Conduit):
                     fields.append(field)
         return fields
 
+    def _get_explicit_field_by_attribute(self, attribute=None):
+        explicit_fields = self._get_explicit_fields()
+        for field in explicit_fields:
+            if field.attribute == attribute:
+                return field
+        return None
+
     def _get_model_fields(self, obj=None):
         """
         Get all Django model fields on an obj
@@ -147,6 +153,21 @@ class ModelResource(Conduit):
             if hasattr(obj, field_name):
                 real_fields.append(field_name)
         return real_fields
+
+    def _get_type_fieldnames(self, obj=None, field_type=None):
+        """
+        Return all the fieldnames of a specific type
+        """
+        if not obj:
+            obj = self.Meta.model
+        fieldnames = self._get_model_fields()
+        matched_fieldnames = []
+        for fieldname in fieldnames:
+            field_tuple = obj._meta.get_field_by_name(fieldname)
+            if isinstance(field_tuple[0], field_type):
+                matched_fieldnames.append(fieldname)
+        return matched_fieldnames
+
 
     def _get_resource_name(self):
         resource_name = getattr(self, 'resource_name', None)
@@ -467,18 +488,29 @@ class ModelResource(Conduit):
     def save_fk_objs(self, request, *args, **kwargs):
         # ForeignKey objects must be created and attached to the parent obj
         # before saving the parent object, since the field may not be nullable
-        fields = self._get_explicit_fields()
-        for field in fields:
-            if getattr(field, 'related', None) == 'fk':
-                related_data = kwargs['request_data'][field.attribute]
+        obj = kwargs['objs'][0]
+
+        # Get all ForeignKey fields on the Model
+        fk_fieldnames = self._get_type_fieldnames(obj, models.ForeignKey)
+        for fieldname in fk_fieldnames:
+            # Get the data to process
+            related_data = kwargs['request_data'][0][fieldname]
+    
+            # If we are using a related resource field, use it
+            conduit_field = self._get_explicit_field_by_attribute(fieldname)
+            if conduit_field:
                 try:
-                    field.save_related(request, self, kwargs['objs'][0], related_data)
+                    conduit_field.save_related(request, self, obj, related_data)
                 except HttpInterrupt as e:
                     # Raise the error but specify it as occuring within
                     # the related field
                     error_dict = {field.attribute: simplejson.loads(e.response.content)}
                     response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
                     raise HttpInterrupt(response)
+            else:
+                # Otherwise we do it simply with primary keys
+                id_fieldname = '{0}_id'.format(fieldname)
+                setattr(obj, id_fieldname, related_data)
         return request, args, kwargs
 
     @match(match=['put', 'detail'])
@@ -500,18 +532,40 @@ class ModelResource(Conduit):
 
     @subscribe(sub=['post', 'put'])
     def save_m2m_objs(self, request, *args, **kwargs):
-        fields = self._get_explicit_fields()
-        for field in fields:
-            if getattr(field, 'related', None) == 'm2m':
-                related_data = kwargs['request_data'][field.attribute]
+        # ForeignKey objects must be created and attached to the parent obj
+        # before saving the parent object, since the field may not be nullable
+        obj = kwargs['objs'][0]
+
+        # Get all ForeignKey fields on the Model
+        m2m_fieldnames = self._get_type_fieldnames(obj, models.ManyToManyField)
+        for fieldname in m2m_fieldnames:
+            # Get the data to process
+            related_data = kwargs['request_data'][0][fieldname]
+    
+            # If we are using a related resource field, use it
+            conduit_field = self._get_explicit_field_by_attribute(fieldname)
+            if conduit_field:
                 try:
-                    field.save_related(request, self, kwargs['objs'][0], related_data)
+                    conduit_field.save_related(request, self, obj, related_data)
                 except HttpInterrupt as e:
                     # Raise the error but specify it as occuring within
                     # the related field
                     error_dict = {field.attribute: simplejson.loads(e.response.content)}
                     response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
                     raise HttpInterrupt(response)
+            else:
+                # Otherwise we do it simply with primary keys
+                related_manager = getattr(obj, fieldname)
+                # Remove any pk's not included in related_data
+                for attached_pk in related_manager.all().values_list('pk', flat=True):
+                    if attached_pk not in related_data:
+                        related_manager.remove(attached_pk)
+
+                # Add all pk's included in related_data
+                for related_pk in related_data:
+                    related_manager.add(related_pk)
+
+
         return request, args, kwargs
 
     @match(match=['detail', 'delete'])
@@ -546,7 +600,6 @@ class ModelResource(Conduit):
                 'obj': obj,
                 'data': obj_data
             })
-
         kwargs['bundles'] = bundles
         return (request, args, kwargs)
 

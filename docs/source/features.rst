@@ -1,0 +1,12 @@
+List of Features
+================
+
+Transaction Support
+	Each API request is wrapped in a transaction and rolls back any changes if an error occurs. For example, changes to an embedded resource may not be allowed. This raises a permissions error and any changes to the parent model instance will be reversed
+
+Easy to Follow Code
+	Conduit's flat and extendable design makes it incredibly easy to debug and tune for performance. The chain of events is meant to be explicit and atomic.
+
+Permissions and Authorization Hooks
+	`Pre-made hooks<access_authorization` are available to filter or authorize resources based on whatever permissions you're using.
+

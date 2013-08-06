@@ -3,6 +3,15 @@ Django-Conduit
 
 Easy and powerful REST APIs for Django.
 
+Why Use Django-Conduit?
+-----------------------
+
+- Easy to read, easy to debug, easy to extend
+- Smart and efficient `Related Resources<related>`
+
+
+See the :doc:`full list of features<features>`.
+
 Table of Contents
 =================
 .. toctree::

@@ -338,12 +338,12 @@ class MethodTestCase(ConduitTestCase):
         post_list = self.factory.post('/foo/')
         kwargs = {
             'pub': ['post', 'list'],
-            'request_data': {
+            'request_data': [{
                 'name': 'foo name',
                 'bar': {
                     'name': 'bar name'
                 }
-            },
+            }],
             'objs': [foo]
         }
         request, args, kwargs = foo_resource.save_fk_objs(post_list, [], **kwargs)
@@ -408,8 +408,6 @@ class MethodTestCase(ConduitTestCase):
             class Fields:
                 bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource)
 
-
-
         foo_resource = FooResource()
         foo = Foo(
             **{ 'name': 'zed',
@@ -425,12 +423,12 @@ class MethodTestCase(ConduitTestCase):
         post_list = self.factory.post('/foo/')
         kwargs = {
             'pub': ['post', 'list'],
-            'request_data': {
+            'request_data': [{
                 'name': 'foo name',
                 'bazzes': [
                     {'name': 'baz 1'}, {'name': 'baz 2'}
                 ]
-            },
+            }],
             'objs': [foo]
         }
         request, args, kwargs = foo_resource.save_m2m_objs(post_list, [], **kwargs)
