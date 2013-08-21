@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
 from django.utils import simplejson
-from django.conf.urls import url, patterns
+from django.conf.urls import url
 from decimal import Decimal
 from dateutil import parser
 
@@ -167,7 +167,6 @@ class ModelResource(Conduit):
             if isinstance(field_tuple[0], field_type):
                 matched_fieldnames.append(fieldname)
         return matched_fieldnames
-
 
     def _get_resource_name(self):
         resource_name = getattr(self, 'resource_name', None)
@@ -361,8 +360,8 @@ class ModelResource(Conduit):
         For example, change datetime strings to datetimes
         Or decimal strings to decimals
         """
-        # If updating/creating single object, we get a dict
-        # change it to a list so we can place inside loop
+        # Place single object dict in list
+        # We treat all requests as if they had multiple objects
         data_dicts = kwargs.get('request_data', [])
         if isinstance(data_dicts, dict):
             data_dicts = [data_dicts]
@@ -438,7 +437,7 @@ class ModelResource(Conduit):
     @subscribe(sub=['post', 'put'])
     def form_validate(self, request, *args, **kwargs):
         form_class = getattr(self.Meta, 'form_class', None)
-        request_data = kwargs.get('request_data', {})
+        request_data = kwargs.get('request_data', [])
         if form_class and request_data:
             objs = kwargs.get('objs', [])
 
@@ -504,7 +503,7 @@ class ModelResource(Conduit):
                 except HttpInterrupt as e:
                     # Raise the error but specify it as occuring within
                     # the related field
-                    error_dict = {field.attribute: simplejson.loads(e.response.content)}
+                    error_dict = {fieldname: simplejson.loads(e.response.content)}
                     response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
                     raise HttpInterrupt(response)
             else:
@@ -550,7 +549,7 @@ class ModelResource(Conduit):
                 except HttpInterrupt as e:
                     # Raise the error but specify it as occuring within
                     # the related field
-                    error_dict = {field.attribute: simplejson.loads(e.response.content)}
+                    error_dict = {fieldname: simplejson.loads(e.response.content)}
                     response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
                     raise HttpInterrupt(response)
             else:

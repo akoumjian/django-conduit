@@ -1,5 +1,5 @@
 from importlib import import_module
-
+from django.core.urlresolvers import resolve
 
 class APIField(object):
     pass
@@ -87,22 +87,26 @@ class ForeignKeyField(APIField):
         Save the related object from data provided
         """
         self.setup_resource()
-        args = []
-        kwargs = {
-            'request_data': rel_obj_data,
-            'pub': []
-        }
-        # Add field to kwargs as if we had hit detail url
-        pk_field = self.resource_cls.Meta.pk_field
-        if pk_field in rel_obj_data:
-            kwargs[pk_field] = rel_obj_data[pk_field]
 
-        # Do some introspection to tell if we are updating or
-        # creating
-        if pk_field in kwargs:
-            kwargs['pub'].extend(['put', 'detail'])
+        # Expecting a resource_uri, so grab the pk, etc.
+        if not self.embed:
+            func, args, kwargs = resolve(rel_obj_data)
+            kwargs['pub'] = ['get', 'detail']
+
         else:
-            kwargs['pub'].extend(['post', 'list'])
+            args = []
+            kwargs = {
+                'request_data': rel_obj_data,
+            }
+            # Add field to kwargs as if we had hit detail url
+            pk_field = self.resource_cls.Meta.pk_field
+            if pk_field in rel_obj_data:
+                # Updated an existing object
+                kwargs[pk_field] = rel_obj_data[pk_field]
+                kwargs['pub'] = ['put', 'detail']
+            else:
+                # Creating a new object
+                kwargs['pub'] = ['post', 'list']
 
         resource = self.resource_cls()
         resource.Meta.api = parent_inst.Meta.api
@@ -166,6 +170,7 @@ class ManyToManyField(APIField):
         self.setup_resource()
         # build our request, args, kwargs to simulate regular request
         args = []
+        # Get all the existing related objects on the parent obj
         objs = getattr(bundle['obj'], self.attribute).all()
         kwargs = {'objs': objs, 'pub': ['list', 'get']}
         resource = self.resource_cls()
@@ -196,22 +201,25 @@ class ManyToManyField(APIField):
         # as list!
         related_objs = []
         for obj_data in rel_obj_data:
-            args = []
-            kwargs = {
-                'request_data': obj_data,
-                'pub': []
-            }
-            # Add field to kwargs as if we had hit detail url
-            pk_field = self.resource_cls.Meta.pk_field
-            if pk_field in obj_data:
-                kwargs[pk_field] = obj_data[pk_field]
+            # Expecting a resource_uri, so grab the pk, etc.
+            if not self.embed:
+                func, args, kwargs = resolve(obj_data)
+                kwargs['pub'] = ['get', 'detail']
 
-            # Do some introspection to tell if we are updating or
-            # creating the current related object
-            if pk_field in kwargs:
-                kwargs['pub'].extend(['put', 'detail'])
             else:
-                kwargs['pub'].extend(['post', 'list'])
+                args = []
+                kwargs = {
+                    'request_data': obj_data,
+                }
+                # Add field to kwargs as if we had hit detail url
+                pk_field = self.resource_cls.Meta.pk_field
+                if pk_field in obj_data:
+                    # Updated an existing object
+                    kwargs[pk_field] = obj_data[pk_field]
+                    kwargs['pub'] = ['put', 'detail']
+                else:
+                    # Creating a new object
+                    kwargs['pub'] = ['post', 'list']
 
             resource = self.resource_cls()
             resource.Meta.api = parent_inst.Meta.api

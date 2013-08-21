@@ -321,7 +321,7 @@ class MethodTestCase(ConduitTestCase):
             class Meta(ModelResource.Meta):
                 model = Foo
             class Fields:
-                bar = ForeignKeyField(attribute='bar', resource_cls=self.resource.__class__)
+                bar = ForeignKeyField(attribute='bar', resource_cls=self.resource.__class__, embed=True)
 
         foo_resource = FooResource()
         foo = Foo(
@@ -406,7 +406,7 @@ class MethodTestCase(ConduitTestCase):
             class Meta(ModelResource.Meta):
                 model = Foo
             class Fields:
-                bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource)
+                bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource, embed=True)
 
         foo_resource = FooResource()
         foo = Foo(
