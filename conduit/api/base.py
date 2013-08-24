@@ -93,7 +93,8 @@ class ModelResource(Conduit):
 
         # Default number of objects to return on
         # get list requests
-        limit = 20
+        default_limit = 20
+        max_limit = 200
 
         # List of allowed methods on a resource for simple
         # authorization limits
@@ -169,7 +170,7 @@ class ModelResource(Conduit):
         return matched_fieldnames
 
     def _get_resource_name(self):
-        resource_name = getattr(self, 'resource_name', None)
+        resource_name = getattr(self.Meta, 'resource_name', None)
         # Guess name from model if not set
         if not resource_name:
             resource_name = self.Meta.model._meta.module_name
@@ -282,6 +283,15 @@ class ModelResource(Conduit):
                 response = self.create_json_response(py_obj=message, status=400)
                 raise HttpInterrupt(response)
             kwargs['order_by'] = order_by
+
+        limit = int(get_params.get('limit', self.Meta.default_limit))
+        get_params.pop('limit', None)
+        if limit:
+            if (limit > self.Meta.max_limit):
+                message = {'__all__': '{0} is higher than max limit of {1}'.format(limit, self.Meta.max_limit)}
+                response = self.create_json_response(py_obj=message, status=400)
+                raise HttpInterrupt(response)
+            kwargs['limit'] = limit
 
         # Add default filters
         filters = {}
@@ -466,11 +476,11 @@ class ModelResource(Conduit):
     @match(match=['get', 'list'])
     def get_list(self, request, *args, **kwargs):
         filtered_instances = kwargs['objs']
-        limit_instances = filtered_instances[:self.Meta.limit]
+        limit_instances = filtered_instances[:kwargs['limit']]
         kwargs['objs'] = limit_instances
         kwargs['meta'] = {
             'total': kwargs['total_count'],
-            'limit': self.Meta.limit
+            'limit': kwargs['limit']
         }
         kwargs['status'] = 200
         return (request, args, kwargs)
