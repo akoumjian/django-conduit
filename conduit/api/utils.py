@@ -100,7 +100,7 @@ class AutoAPI(object):
         buff += import_tmp.format(', '.join(res_names))
         buff += '\n\n'
         # Api Register strings
-        buff += '\napi = Api()'
+        buff += "\napi = Api(name='v1')"
         for res_name in res_names:
             buff += '\napi.register({0}())'.format(res_name)
 

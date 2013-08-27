@@ -104,6 +104,11 @@ class ForeignKeyField(APIField):
         if not self.embed:
             func, args, kwargs = resolve(rel_obj_data)
             kwargs['pub'] = ['get', 'detail']
+            pk_field = self.resource_cls.Meta.pk_field
+            related_obj = self.resource_cls.Meta.model.objects.get(
+                **{pk_field: kwargs[pk_field]}
+            )
+            kwargs['bundles'] = [{'obj': related_obj}]
 
         else:
             args = []
@@ -262,9 +267,7 @@ class ManyToManyField(APIField):
             related_objs.append(bundle['obj'])
         related_manager = getattr(obj, self.attribute)
         for attached_obj in related_manager.all():
-            print attached_obj
             if attached_obj not in related_objs:
-                print 'removing {0}'.format(attached_obj)
                 related_manager.remove(attached_obj)
 
 

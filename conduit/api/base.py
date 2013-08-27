@@ -57,8 +57,8 @@ class ModelResource(Conduit):
 
     class Meta:
         conduit = (
-            'check_allowed_methods',
             'build_pub',
+            'check_allowed_methods',
             'get_object_from_kwargs',
             'process_filters',
             'apply_filters',
@@ -234,14 +234,6 @@ class ModelResource(Conduit):
 
         return patterns
 
-    def check_allowed_methods(self, request, *args, **kwargs):
-        allowed_methods = getattr(self.Meta, 'allowed_methods', ['get', 'put', 'post', 'delete'])
-        if request.method.lower() not in allowed_methods:
-            message = {'__all__': 'Method Not Allowed'}
-            response = self.create_json_response(py_obj=message, status=405)
-            raise HttpInterrupt(response)
-        return request, args, kwargs
-
     def build_pub(self, request, *args, **kwargs):
         """
         Builds a list of keywords relevant to this request
@@ -254,6 +246,16 @@ class ModelResource(Conduit):
             pub.append('list')
         kwargs['pub'] = pub
         return (request, args, kwargs)
+
+    def check_allowed_methods(self, request, *args, **kwargs):
+        allowed_methods = getattr(self.Meta, 'allowed_methods', ['get', 'put', 'post', 'delete'])
+        for keyword in kwargs['pub']:
+            if keyword in ['get', 'put', 'post', 'delete'] and keyword not in allowed_methods:
+                message = {'__all__': '{0} Method Not Allowed'.format(keyword.upper())}
+                response = self.create_json_response(py_obj=message, status=405)
+                raise HttpInterrupt(response)
+        return request, args, kwargs
+
 
     @subscribe(sub=['detail'])
     def get_object_from_kwargs(self, request, *args, **kwargs):
@@ -658,6 +660,7 @@ class ModelResource(Conduit):
         Prepare the response data dict for each object in bundles
         """
         bundles = kwargs['bundles']
+        print bundles
         for bundle in bundles:
             obj = bundle['obj']
             obj_data = {}
@@ -741,16 +744,22 @@ class ModelResource(Conduit):
     @avoid(avoid=['delete'])
     def produce_response_data(self, request, *args, **kwargs):
         data_dicts = []
+        len(kwargs['bundles'])
         for bundle in kwargs['bundles']:
             data_dicts.append(bundle['response_data'])
 
-        if 'detail' in kwargs['pub'] or 'post' in kwargs['pub']:
+        if 'detail' in kwargs['pub']:
             kwargs['response_data'] = data_dicts[0]
-        else:
+        if 'get' in kwargs['pub'] and 'list' in kwargs['pub']:
             kwargs['response_data'] = {
                 'meta': kwargs['meta'],
                 'objects': data_dicts
             }
+        elif len(data_dicts) == 1:
+            kwargs['response_data'] = data_dicts[0]
+        else:
+            kwargs['response_data'] = data_dicts
+
         return (request, args, kwargs)
 
     def return_response(self, request, *args, **kwargs):
