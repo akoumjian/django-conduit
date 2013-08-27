@@ -297,6 +297,10 @@ class ModelResource(Conduit):
                 raise HttpInterrupt(response)
             kwargs['limit'] = limit
 
+        offset = int(get_params.get('offset', 0))
+        get_params.pop('offset', None)
+        kwargs['offset'] = offset
+
         # Add default filters
         filters = {}
         filters.update(self.Meta.default_filters)
@@ -521,7 +525,9 @@ class ModelResource(Conduit):
         """
         Paginate results after authorization filters
         """
-        kwargs['bundles'] = kwargs['bundles'][:kwargs['limit']]
+        start = kwargs['offset']
+        end = kwargs['offset'] + kwargs['limit']
+        kwargs['bundles'] = kwargs['bundles'][start:end]
         return request, args, kwargs
 
     @subscribe(sub=['post', 'put'])
@@ -615,7 +621,8 @@ class ModelResource(Conduit):
     def get_list(self, request, *args, **kwargs):
         kwargs['meta'] = {
             'total': kwargs['total_count'],
-            'limit': kwargs['limit']
+            'limit': kwargs['limit'],
+            'offset': kwargs['offset'],
         }
         kwargs['status'] = 200
         return (request, args, kwargs)
