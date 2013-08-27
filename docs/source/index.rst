@@ -66,6 +66,7 @@ Topics
 * :doc:`Filtering & Ordering<filtering_ordering>`
 * :doc:`Related Resources<related>`
 * :doc:`Access & Authorization<access_authorization>`
+* :doc:`Custom Fields<custom_fields>`
 * :doc:`Forms & Validation<forms_validation>`
 * :doc:`Conduit Views<conduit>`
 * :doc:`ModelResource<api/modelresource>`

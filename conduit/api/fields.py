@@ -17,9 +17,16 @@ def import_class(resource_cls_str):
 
 class ForeignKeyField(APIField):
     dehydrate_conduit = (
+        'bundles_from_objs',
         'auth_get_detail',
         'auth_get_list',
-        'objs_to_bundles',
+        'auth_put_detail',
+        'auth_put_list',
+        'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
+        'response_data_from_bundles',
         'dehydrate_explicit_fields',
         'add_resource_uri',
     )
@@ -28,13 +35,18 @@ class ForeignKeyField(APIField):
         'check_allowed_methods',
         'get_object_from_kwargs',
         'hydrate_request_data',
-        'initialize_new_object',
-        'save_fk_objs',
+        'bundles_from_request_data',
+        'auth_get_detail',
+        'auth_get_list',
         'auth_put_detail',
+        'auth_put_list',
         'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
         'form_validate',
-        'put_detail',
-        'post_list',
+        'save_fk_objs',
+        'update_objs_from_data',
         'save_m2m_objs',
     )
 
@@ -75,11 +87,11 @@ class ForeignKeyField(APIField):
                 (request, args, kwargs,) = method(resource, request, *args, **kwargs)
             # Grab the dehydrated data and place it on the parent's bundle
             related_bundle = kwargs['bundles'][0]
-            bundle['data'][self.attribute] = related_bundle['data']
+            bundle['response_data'][self.attribute] = related_bundle['response_data']
         ## By default we just include the resource uri
         else:
             resource_uri = resource._get_resource_uri(obj=obj)
-            bundle['data'][self.attribute] = resource_uri
+            bundle['response_data'][self.attribute] = resource_uri
         return bundle
 
     def save_related(self, request, parent_inst, obj, rel_obj_data):
@@ -113,10 +125,10 @@ class ForeignKeyField(APIField):
         for methodname in self.save_conduit:
             method = resource._get_method(methodname)
             (request, args, kwargs,) = method(resource, request, *args, **kwargs)
-        # Grab the dehydrated data and place it on the parent's bundle
-        related_obj = kwargs['objs'][0]
+
         # Now we have to update the FK reference on the original object
         # before saving
+        related_obj = kwargs['bundles'][0]['obj']
         setattr(obj, self.attribute, related_obj)
 
         return related_obj
@@ -124,9 +136,16 @@ class ForeignKeyField(APIField):
 
 class ManyToManyField(APIField):
     dehydrate_conduit = (
+        'bundles_from_objs',
         'auth_get_detail',
         'auth_get_list',
-        'objs_to_bundles',
+        'auth_put_detail',
+        'auth_put_list',
+        'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
+        'response_data_from_bundles',
         'dehydrate_explicit_fields',
         'add_resource_uri',
     )
@@ -135,13 +154,18 @@ class ManyToManyField(APIField):
         'check_allowed_methods',
         'get_object_from_kwargs',
         'hydrate_request_data',
-        'initialize_new_object',
-        'save_fk_objs',
+        'bundles_from_request_data',
+        'auth_get_detail',
+        'auth_get_list',
         'auth_put_detail',
+        'auth_put_list',
         'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
         'form_validate',
-        'put_detail',
-        'post_list',
+        'save_fk_objs',
+        'update_objs_from_data',
         'save_m2m_objs',
     )
 
@@ -183,13 +207,13 @@ class ManyToManyField(APIField):
 
             dehydrated_data = []
             for related_bundle in kwargs['bundles']:
-                dehydrated_data.append(related_bundle['data'])
+                dehydrated_data.append(related_bundle['response_data'])
         else:
             dehydrated_data = []
             for obj in objs:
                 resource_uri = resource._get_resource_uri(obj=obj)
                 dehydrated_data.append(resource_uri)
-        bundle['data'][self.attribute] = dehydrated_data
+        bundle['response_data'][self.attribute] = dehydrated_data
         return bundle
 
     def save_related(self, request, parent_inst, obj, rel_obj_data):
@@ -199,7 +223,7 @@ class ManyToManyField(APIField):
         self.setup_resource()
         # For ManyToMany, rel_obj_data should be formatted
         # as list!
-        related_objs = []
+        related_bundles = []
         for obj_data in rel_obj_data:
             # Expecting a resource_uri, so grab the pk, etc.
             if not self.embed:
@@ -225,18 +249,24 @@ class ManyToManyField(APIField):
             resource.Meta.api = parent_inst.Meta.api
             for methodname in self.save_conduit:
                 method = resource._get_method(methodname)
-                (request, args, kwargs,) = method(resource, request, *args, **kwargs)
+                (request, args, kwargs) = method(resource, request, *args, **kwargs)
             # Grab the dehydrated data and place it on the parent's bundle
-            related_objs.append(kwargs['objs'][0])
+            related_bundles.append(kwargs['bundles'][0])
 
         # Now we remove any ManyToMany relationships if
         # the related obj was not specified in rel_obj_data
         # This is because the rel_obj_data represents the
         # entire value of that field.
+        related_objs = []
+        for bundle in related_bundles:
+            related_objs.append(bundle['obj'])
         related_manager = getattr(obj, self.attribute)
         for attached_obj in related_manager.all():
+            print attached_obj
             if attached_obj not in related_objs:
+                print 'removing {0}'.format(attached_obj)
                 related_manager.remove(attached_obj)
+
 
         # Now add any related objects that we created
         # Adding an existing relationship has no effect

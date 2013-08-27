@@ -173,87 +173,6 @@ class MethodTestCase(ConduitTestCase):
         request, args, kwargs = self.resource.hydrate_request_data(post_list, **kwargs)
         self.assertEqual([post_hydrate_data], kwargs['request_data'])
 
-    def test_pre_get_list(self):
-        class FooResource(ModelResource):
-            class Meta(ModelResource.Meta):
-                model = Foo
-
-        foo_resource = FooResource()
-
-        # Create some instances to fetch from the orm
-        foo_fixtures = [
-            {   'name': 'alpha',
-                'text': '',
-                'integer': 1,
-                'float_field': 123.123,
-                'boolean': True,
-                'decimal': '12.34',
-                'file_field': 'test.mov',
-            },
-            {   'name': 'beta',
-                'text': '',
-                'integer': 8,
-                'float_field': 123.123,
-                'boolean': True,
-                'decimal': '12.34',
-                'file_field': 'test.mov',
-            },
-            {   'name': 'delta',
-                'text': '',
-                'integer': 5,
-                'float_field': 123.123,
-                'boolean': True,
-                'decimal': '12.34',
-                'file_field': 'test.mov',
-            },
-            {   'name': 'gamma',
-                'text': '',
-                'integer': 2,
-                'float_field': 123.123,
-                'boolean': True,
-                'decimal': '12.34',
-                'file_field': 'test.mov',
-            },
-            {   'name': 'zed',
-                'text': '',
-                'integer': 9,
-                'float_field': 123.123,
-                'boolean': True,
-                'decimal': '12.34',
-                'file_field': 'test.mov',
-            },
-        ]
-        for items in foo_fixtures:
-            foo = Foo(**items)
-            foo.save()
-
-        kwargs = {
-            'order_by': '-name',
-            # Should only return alpha, beta, delta
-            # Default-filtering will reduce down to
-            # alpha and delta
-            'filters': {
-                'name__lte': 'delta',
-                'integer__lte': 5
-            },
-            'pub': ['get', 'list']
-        }
-        get_list = self.factory.get('/foo/')
-        request, args, kwargs = foo_resource.pre_get_list(get_list, [], **kwargs)
-
-        # Make sure the objs keyword was populated
-        objs = kwargs.get('objs', False)
-
-        self.assertEqual(objs.count(), 2, msg='Filtering returned {0} and should have been 2'.format(objs.count()))
-
-        self.assertEqual(kwargs.get('total_count', None), 2)
-
-        prev_obj = None
-        for obj in objs:
-            if prev_obj:
-                self.assertTrue(obj.name <= prev_obj.name, msg='Objects should be ordered by -name')
-            prev_obj = obj
-
     def test_form_validate(self):
         class BarForm(forms.ModelForm):
             class Meta:
@@ -264,14 +183,19 @@ class MethodTestCase(ConduitTestCase):
                 raise forms.ValidationError('Fake validation error', code='fake')
                 return data
         self.resource.Meta.form_class = BarForm
-
+        bar = Bar.objects.create()
         kwargs = {
             'pub': ['post', 'list'],
-            'request_data': {
-                'name': 'whatevs',
-                'resource_uri': '/api/v1/bar/1',
-                'random_field': 'foobar'
-            }
+            'bundles': [
+                {
+                    'obj': bar,
+                    'request_data': {
+                        'name': 'whatevs',
+                        'resource_uri': '/api/v1/bar/{0}'.format(bar.pk),
+                        'random_field': 'foobar'
+                    }
+                }
+            ]
         }
 
         post_list = self.factory.post('/bar/')
@@ -285,36 +209,6 @@ class MethodTestCase(ConduitTestCase):
         }
         request, args, kwargs = self.resource.get_detail(get_detail, [], **kwargs)
         self.assertEqual(kwargs['status'], 200)
-
-    def test_get_list(self):
-        for name in ['one', 'two', 'three', 'four']:
-            self.resource.Meta.model(name=name).save()
-        self.resource.Meta.limit = 2
-        get_list = self.factory.get('/bar/')
-        kwargs = {
-            'pub': ['get', 'list'],
-            'objs': self.resource.Meta.model.objects.all(),
-            'total_count': self.resource.Meta.model.objects.all().count()
-        }
-        request, args, kwargs = self.resource.get_list(get_list, [], **kwargs)
-        objs = kwargs.get('objs', [])
-        self.assertEqual(objs.count(), 2)
-
-        test_meta = {
-            'total': 4,
-            'limit': 2
-        }
-        self.assertEqual(kwargs['meta'], test_meta)
-        self.assertEqual(kwargs['status'], 200)
-
-    def test_initialize_new_object(self):
-        kwargs = {
-            'pub': ['post', 'list']
-        }
-        post_list = self.factory.post('/bar/')
-        request, args, kwargs = self.resource.initialize_new_object(post_list, [], **kwargs)
-        obj = kwargs['objs'][0]
-        self.assertEqual(obj.__class__, self.resource.Meta.model)
 
     def test_save_fk_objs(self):
         class FooResource(ModelResource):
@@ -338,64 +232,18 @@ class MethodTestCase(ConduitTestCase):
         post_list = self.factory.post('/foo/')
         kwargs = {
             'pub': ['post', 'list'],
-            'request_data': [{
-                'name': 'foo name',
-                'bar': {
-                    'name': 'bar name'
-                }
+            'bundles': [{
+                'request_data': {
+                    'name': 'foo name',
+                    'bar': {
+                        'name': 'bar name'
+                    },
+                },
+                'obj': foo
             }],
-            'objs': [foo]
         }
         request, args, kwargs = foo_resource.save_fk_objs(post_list, [], **kwargs)
-        self.assertEqual(kwargs['objs'][0].bar.name, 'bar name')
-
-    def test_put_detail(self):
-        class FooResource(ModelResource):
-            class Meta(ModelResource.Meta):
-                model = Foo
-        foo_resource = FooResource()
-        foo = Foo(
-            **{ 'name': 'zed',
-                'text': '',
-                'integer': 9,
-                'float_field': 123.123,
-                'boolean': True,
-                'decimal': '12.34',
-                'file_field': 'test.mov',
-            }
-        )
-        foo.save()
-        data = {
-            'pub': ['put', 'detail'],
-            'objs': [foo],
-            'request_data': [{
-                'name': 'bud',
-                'text': 'new text',
-                'integer': 25,
-                'float_field': 456.456,
-                'boolean': False,
-                'decimal': '30.12',
-                'file_field': 'test.pdf',
-            }]
-        }
-        put_detail = self.factory.put('/foo/1/')
-        request, args, kwargs = foo_resource.put_detail(put_detail, [], **data)
-        obj = kwargs['objs'][0]
-        for field in data['request_data'][0]:
-            self.assertEqual(getattr(obj, field), data['request_data'][0][field])
-
-    def test_post_list(self):
-        kwargs = {
-            'pub': ['post', 'list'],
-            'objs': [self.resource.Meta.model()],
-            'request_data': [{
-                'name': 'new bar'
-            }]
-        }
-        post_list = self.factory.post('/bar/')
-        request, args, kwargs = self.resource.post_list(post_list, [], **kwargs)
-        self.assertEqual(kwargs['objs'][0].name, kwargs['request_data'][0]['name'])
-        self.assertEqual(kwargs['status'], 201)
+        self.assertEqual(kwargs['bundles'][0]['obj'].bar.name, 'bar name')
 
     def test_save_m2m_objs(self):
         class BazResource(ModelResource):
@@ -423,16 +271,18 @@ class MethodTestCase(ConduitTestCase):
         post_list = self.factory.post('/foo/')
         kwargs = {
             'pub': ['post', 'list'],
-            'request_data': [{
-                'name': 'foo name',
-                'bazzes': [
-                    {'name': 'baz 1'}, {'name': 'baz 2'}
-                ]
-            }],
-            'objs': [foo]
+            'bundles': [{
+                'request_data': {
+                    'name': 'foo name',
+                    'bazzes': [
+                        {'name': 'baz 1'}, {'name': 'baz 2'}
+                    ]
+                },
+                'obj': foo
+            }]
         }
         request, args, kwargs = foo_resource.save_m2m_objs(post_list, [], **kwargs)
-        bazzes = kwargs['objs'][0].bazzes.all()
+        bazzes = kwargs['bundles'][0]['obj'].bazzes.all()
         self.assertEqual(bazzes.count(), 2)
 
     def test_delete_detail(self):
@@ -445,33 +295,6 @@ class MethodTestCase(ConduitTestCase):
         delete_detail = self.factory.delete('/bar/1/')
         request, args, kwargs = self.resource.delete_detail(delete_detail, [], **kwargs)
         self.assertRaises(ObjectDoesNotExist, Bar.objects.get, pk=bar.id)
-
-    def test_objs_to_bundles(self):
-        class FooResource(ModelResource):
-            class Meta(ModelResource.Meta):
-                model = Foo
-        foo_resource = FooResource()
-        foo_dict = {
-            'name': 'zed',
-            'text': '',
-            'integer': 9,
-            'float_field': 123.123,
-            'boolean': True,
-            'decimal': '12.34',
-            'file_field': 'test.mov',
-        }
-        foo = Foo(**foo_dict)
-        foo.save()
-
-        kwargs = {
-            'pub': ['get', 'list'],
-            'objs': [foo]
-        }
-        get_list = self.factory.get('/foo/')
-        request, args, kwargs = foo_resource.objs_to_bundles(get_list, [], **kwargs)
-        bundle = kwargs['bundles'][0]
-        self.assertEqual(bundle['obj'], kwargs['objs'][0])
-        self.assertEqual(type(bundle['data']), dict)
 
     def test_dehydrate_explicit_fields(self):
         class BazResource(ModelResource):
@@ -504,7 +327,7 @@ class MethodTestCase(ConduitTestCase):
 
         bundles = [{
             'obj': foo,
-            'data': {}
+            'response_data': {}
         }]
 
         kwargs = {
@@ -514,7 +337,7 @@ class MethodTestCase(ConduitTestCase):
         get_detail = self.factory.get('/foo/1')
         request, args, kwargs = foo_resource.dehydrate_explicit_fields(get_detail, [], **kwargs)
 
-        bazzes = kwargs['bundles'][0]['data']['bazzes']
+        bazzes = kwargs['bundles'][0]['response_data']['bazzes']
 
         self.assertTrue('name' in bazzes[0])
 
@@ -525,12 +348,12 @@ class MethodTestCase(ConduitTestCase):
             'pub': ['get', 'list'],
             'bundles': [{
                 'obj': bar,
-                'data': {}
+                'response_data': {}
             }]
         }
         get_list = self.factory.get('/bar/')
         request, args, kwargs = self.resource.add_resource_uri(get_list, [], **kwargs)
 
-        data = kwargs['bundles'][0]['data']
+        data = kwargs['bundles'][0]['response_data']
         self.assertEqual(data['resource_uri'], '/api/{0}/bar/{1}/'.format(self.resource.Meta.api.name, bar.pk))
 

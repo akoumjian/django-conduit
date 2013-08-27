@@ -61,9 +61,11 @@ class ModelResource(Conduit):
             'build_pub',
             'get_object_from_kwargs',
             'process_filters',
+            'apply_filters',
+            'bundles_from_objs',
             'json_to_python',
             'hydrate_request_data',
-            'pre_get_list',
+            'bundles_from_request_data',
             'auth_get_detail',
             'auth_get_list',
             'auth_put_detail',
@@ -73,15 +75,17 @@ class ModelResource(Conduit):
             'auth_delete_detail',
             'auth_delete_list',
             'form_validate',
+            'limit_get_list',
+            'save_fk_objs',
+            'update_objs_from_data',
+            'save_m2m_objs',
             'get_detail',
             'get_list',
-            'initialize_new_object',
-            'save_fk_objs',
             'put_detail',
+            'put_list',
             'post_list',
-            'save_m2m_objs',
             'delete_detail',
-            'objs_to_bundles',
+            'response_data_from_bundles',
             'dehydrate_explicit_fields',
             'add_resource_uri',
             'produce_response_data',
@@ -309,6 +313,35 @@ class ModelResource(Conduit):
         kwargs['filters'] = filters
         return (request, args, kwargs)
 
+    @match(match=['get', 'list'])
+    def apply_filters(self, request, *args, **kwargs):
+        """
+        run against filters before authorization checks
+
+        Makes per object authorization checks faster by
+        limiting the instances it must iterate through
+        """
+        cls = self.Meta.model
+        total_instances = cls.objects.all()
+        # apply ordering
+        if 'order_by' in kwargs:
+            total_instances = total_instances.order_by(kwargs['order_by'])
+
+        filtered_instances = total_instances.filter(**kwargs['filters'])
+        kwargs['objs'] = filtered_instances
+        kwargs['total_count'] = filtered_instances.count()
+        return (request, args, kwargs)
+
+    @match(match=['get'])
+    def bundles_from_objs(self, request, *args, **kwargs):
+        bundles = []
+        for obj in kwargs['objs']:
+            bundle = {}
+            bundle['obj'] = obj
+            bundles.append(bundle)
+        kwargs['bundles'] = bundles
+        return request, args, kwargs
+
     @subscribe(sub=['post', 'put'])
     def json_to_python(self, request, *args, **kwargs):
         if request.body:
@@ -388,27 +421,40 @@ class ModelResource(Conduit):
         kwargs['request_data'] = data_dicts
         return request, args, kwargs
 
-    @match(match=['get', 'list'])
-    def pre_get_list(self, request, *args, **kwargs):
+    @subscribe(sub=['post', 'put'])
+    def bundles_from_request_data(self, request, *args, **kwargs):
         """
-        run against filters before authorization checks
-
-        Makes per object authorization checks faster by
-        limiting the instances it must iterate through
+        Form pairings of request data and new or existing objects
         """
-        cls = self.Meta.model
-        total_instances = cls.objects.all()
-        # apply ordering
-        if 'order_by' in kwargs:
-            total_instances = total_instances.order_by(kwargs['order_by'])
-
-        filtered_instances = total_instances.filter(**kwargs['filters'])
-        kwargs['objs'] = filtered_instances
-        kwargs['total_count'] = filtered_instances.count()
-        return (request, args, kwargs)
+        bundles = []
+        objs = []
+        pk_field = getattr(self.Meta, 'pk_field', 'id')
+        for data in kwargs['request_data']:
+            data_dict = data.copy()
+            if 'put' in kwargs['pub']:
+                # Updating existin object, so fetch it
+                try:
+                    obj = self.Meta.model.objects.get(**{pk_field: data_dict[pk_field]})
+                except self.Meta.model.DoesNotExist:
+                    message = {'__all__': '{0} with key {1} does not exist'.format(self.Meta.model, data_dict[pk_field])}
+                    response = self.create_json_response(py_obj=message, status=400)
+                    raise HttpInterrupt(response)
+                except KeyError:
+                    message = {'__all__': 'Data set missing id or key'}         
+                    response = self.create_json_response(py_obj=message, status=400)
+                    raise HttpInterrupt(response)
+            else:                     
+                obj = self.Meta.model()
+            bundle = {}
+            bundle['request_data'] = data_dict
+            bundle['obj'] = obj
+            bundles.append(bundle)
+            objs.append(obj)
+        kwargs['bundles'] = bundles
+        kwargs['objs'] = objs
+        return request, args, kwargs
 
     # Authorization hooks
-    # Also defines allowed methods!
     @match(match=['get', 'detail'])
     def auth_get_detail(self, request, *args, **kwargs):
         return (request, args, kwargs)
@@ -421,7 +467,11 @@ class ModelResource(Conduit):
     def auth_put_detail(self, request, *args, **kwargs):
         return (request, args, kwargs)
 
-    @match(match=['put', 'detail'])
+    @match(match=['put', 'list'])
+    def auth_put_list(self, request, *args, **kwargs):
+        return (request, args, kwargs)
+
+    @match(match=['post', 'list'])
     def auth_post_list(self, request, *args, **kwargs):
         return (request, args, kwargs)
 
@@ -439,34 +489,122 @@ class ModelResource(Conduit):
         response = self.create_json_response(py_obj='', status=405)
         raise HttpInterrupt(response)
 
-    @match(match=['put', 'list'])
-    def auth_put_list(self, request, *args, **kwargs):
-        response = HttpResponse('', status=405, content_type='application/json')
-        raise HttpInterrupt(response)
 
     @subscribe(sub=['post', 'put'])
     def form_validate(self, request, *args, **kwargs):
         form_class = getattr(self.Meta, 'form_class', None)
-        request_data = kwargs.get('request_data', [])
-        if form_class and request_data:
-            objs = kwargs.get('objs', [])
-
-            # Only send fields from request data that exist
-            # on model
-            data = request_data.copy()
+        if form_class:
             fieldnames = self._get_model_fields()
-            for key, val in data.items():
-                if key not in fieldnames:
-                    del data[key]
-            if objs:
-                form = self.Meta.form_class(data, instance=objs[0])
-            else:
-                form = self.Meta.form_class(data)
-            if not form.is_valid():
-                response = self.create_json_response(py_obj=form.errors, status=400)
-                raise HttpInterrupt(response)
+
+            for bundle in kwargs['bundles']:
+                data_copy = bundle['request_data'].copy()
+
+                # Remove extra fields before validating forms
+                # Such as resource_uri
+                for key, val in data_copy.items():
+                    if key not in fieldnames:
+                        del data_copy[key]
+
+                if 'obj' in bundle:
+                    form = self.Meta.form_class(data_copy, instance=bundle['obj'])
+                else:
+                    form = self.Meta.form_class(data_copy)
+
+                if not form.is_valid():
+                    response = self.create_json_response(py_obj=form.errors, status=400)
+                    raise HttpInterrupt(response)
 
         return (request, args, kwargs)
+
+    @match(match=['get', 'list'])
+    def limit_get_list(self, request, *args, **kwargs):
+        """
+        Paginate results after authorization filters
+        """
+        kwargs['bundles'] = kwargs['bundles'][:kwargs['limit']]
+        return request, args, kwargs
+
+    @subscribe(sub=['post', 'put'])
+    def save_fk_objs(self, request, *args, **kwargs):
+        # ForeignKey objects must be created and attached to the parent obj
+        # before saving the parent object, since the field may not be nullable
+        for bundle in kwargs['bundles']:
+            obj = bundle['obj']
+            request_data = bundle['request_data']
+
+            # Get all ForeignKey fields on the Model
+            fk_fieldnames = self._get_type_fieldnames(obj, models.ForeignKey)
+            for fieldname in fk_fieldnames:
+                # Get the data to process
+                related_data = request_data[fieldname]
+        
+                # If we are using a related resource field, use it
+                conduit_field = self._get_explicit_field_by_attribute(fieldname)
+                if conduit_field:
+                    try:
+                        conduit_field.save_related(request, self, obj, related_data)
+                    except HttpInterrupt as e:
+                        # Raise the error but specify it as occuring within
+                        # the related field
+                        error_dict = {fieldname: simplejson.loads(e.response.content)}
+                        response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                        raise HttpInterrupt(response)
+
+                # Otherwise we do it simply with primary keys
+                else:
+                    id_fieldname = '{0}_id'.format(fieldname)
+                    setattr(obj, id_fieldname, related_data)
+
+        return request, args, kwargs
+
+    @subscribe(sub=['post', 'put'])
+    def update_objs_from_data(self, request, *args, **kwargs):
+        """
+        Update the objects in place with processed request data
+        """
+        for bundle in kwargs['bundles']:
+            self._update_from_dict(bundle['obj'], bundle['request_data'])
+            bundle['obj'].save()
+        return request, args, kwargs
+
+    @subscribe(sub=['post', 'put'])
+    def save_m2m_objs(self, request, *args, **kwargs):
+        ## Must be done after persisting parent objects
+        for bundle in kwargs['bundles']:
+            obj = bundle['obj']
+            request_data = bundle['request_data']
+
+            # Get all ForeignKey fields on the Model
+            m2m_fieldnames = self._get_type_fieldnames(obj, models.ManyToManyField)
+            for fieldname in m2m_fieldnames:
+                # Get the data to process
+                related_data = request_data[fieldname]
+        
+                # If we are using a related resource field, use it
+                conduit_field = self._get_explicit_field_by_attribute(fieldname)
+                if conduit_field:
+                    try:
+                        conduit_field.save_related(request, self, obj, related_data)
+                    except HttpInterrupt as e:
+                        # Raise the error but specify it as occuring within
+                        # the related field
+                        error_dict = {fieldname: simplejson.loads(e.response.content)}
+                        response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                        raise HttpInterrupt(response)
+
+                # Otherwise we do it simply with primary keys
+                else:
+                    related_manager = getattr(obj, fieldname)
+                    # Remove any pk's not included in related_data
+                    for attached_pk in related_manager.all().values_list('pk', flat=True):
+                        if attached_pk not in related_data:
+                            related_manager.remove(attached_pk)
+
+                    # Add all pk's included in related_data
+                    for related_pk in related_data:
+                        related_manager.add(related_pk)
+
+        return request, args, kwargs
 
     @match(match=['get', 'detail'])
     def get_detail(self, request, *args, **kwargs):
@@ -475,9 +613,6 @@ class ModelResource(Conduit):
 
     @match(match=['get', 'list'])
     def get_list(self, request, *args, **kwargs):
-        filtered_instances = kwargs['objs']
-        limit_instances = filtered_instances[:kwargs['limit']]
-        kwargs['objs'] = limit_instances
         kwargs['meta'] = {
             'total': kwargs['total_count'],
             'limit': kwargs['limit']
@@ -485,97 +620,21 @@ class ModelResource(Conduit):
         kwargs['status'] = 200
         return (request, args, kwargs)
 
-    @match(match=['post', 'list'])
-    def initialize_new_object(self, request, *args, **kwargs):
-        # Before we attached foreign key objects, we have to have
-        # an initialized object
-        instance = self.Meta.model()
-        kwargs['objs'] = [instance]
-        return request, args, kwargs
-
-    @subscribe(sub=['post', 'put'])
-    def save_fk_objs(self, request, *args, **kwargs):
-        # ForeignKey objects must be created and attached to the parent obj
-        # before saving the parent object, since the field may not be nullable
-        obj = kwargs['objs'][0]
-
-        # Get all ForeignKey fields on the Model
-        fk_fieldnames = self._get_type_fieldnames(obj, models.ForeignKey)
-        for fieldname in fk_fieldnames:
-            # Get the data to process
-            related_data = kwargs['request_data'][0][fieldname]
-    
-            # If we are using a related resource field, use it
-            conduit_field = self._get_explicit_field_by_attribute(fieldname)
-            if conduit_field:
-                try:
-                    conduit_field.save_related(request, self, obj, related_data)
-                except HttpInterrupt as e:
-                    # Raise the error but specify it as occuring within
-                    # the related field
-                    error_dict = {fieldname: simplejson.loads(e.response.content)}
-                    response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
-                    raise HttpInterrupt(response)
-            else:
-                # Otherwise we do it simply with primary keys
-                id_fieldname = '{0}_id'.format(fieldname)
-                setattr(obj, id_fieldname, related_data)
-        return request, args, kwargs
-
     @match(match=['put', 'detail'])
     def put_detail(self, request, *args, **kwargs):
-        instance = self._update_from_dict(kwargs['objs'][0], kwargs['request_data'][0])
-        instance.save()
-        kwargs['objs'] = [instance]
         kwargs['status'] = 201
         return (request, args, kwargs)
+
+    @match(match=['put', 'list'])
+    def put_list(self, request, *args, **kwargs):
+        kwargs['status'] = 201
+        kwargs['meta'] = {'limit': len(kwargs['bundles'])}
+        return request, args, kwargs
 
     @match(match=['post', 'list'])
     def post_list(self, request, *args, **kwargs):
-        instance = kwargs['objs'][0]
-        instance = self._update_from_dict(instance, kwargs['request_data'][0])
-        instance.save()
-        kwargs['objs'] = [instance]
         kwargs['status'] = 201
         return (request, args, kwargs)
-
-    @subscribe(sub=['post', 'put'])
-    def save_m2m_objs(self, request, *args, **kwargs):
-        # ForeignKey objects must be created and attached to the parent obj
-        # before saving the parent object, since the field may not be nullable
-        obj = kwargs['objs'][0]
-
-        # Get all ForeignKey fields on the Model
-        m2m_fieldnames = self._get_type_fieldnames(obj, models.ManyToManyField)
-        for fieldname in m2m_fieldnames:
-            # Get the data to process
-            related_data = kwargs['request_data'][0][fieldname]
-    
-            # If we are using a related resource field, use it
-            conduit_field = self._get_explicit_field_by_attribute(fieldname)
-            if conduit_field:
-                try:
-                    conduit_field.save_related(request, self, obj, related_data)
-                except HttpInterrupt as e:
-                    # Raise the error but specify it as occuring within
-                    # the related field
-                    error_dict = {fieldname: simplejson.loads(e.response.content)}
-                    response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
-                    raise HttpInterrupt(response)
-            else:
-                # Otherwise we do it simply with primary keys
-                related_manager = getattr(obj, fieldname)
-                # Remove any pk's not included in related_data
-                for attached_pk in related_manager.all().values_list('pk', flat=True):
-                    if attached_pk not in related_data:
-                        related_manager.remove(attached_pk)
-
-                # Add all pk's included in related_data
-                for related_pk in related_data:
-                    related_manager.add(related_pk)
-
-
-        return request, args, kwargs
 
     @match(match=['detail', 'delete'])
     def delete_detail(self, request, *args, **kwargs):
@@ -587,29 +646,22 @@ class ModelResource(Conduit):
         return (request, args, kwargs)
 
     @avoid(avoid=['delete'])
-    def objs_to_bundles(self, request, *args, **kwargs):
+    def response_data_from_bundles(self, request, *args, **kwargs):
         """
-        Returns list of objects bundled with python dict representations
-
-        Part of the dehydration process
+        Prepare the response data dict for each object in bundles
         """
-        objs = kwargs.get('objs', [])
-        bundles = []
-        for obj in objs:
+        bundles = kwargs['bundles']
+        for bundle in bundles:
+            obj = bundle['obj']
             obj_data = {}
             for fieldname in self._get_model_fields(obj):
-                # get_all_field_names() returns some non existant
-                # fields, like 'foo' when really
                 field = obj._meta.get_field_by_name(fieldname)[0]
                 
                 dehydrated_value = self._to_basic_type(obj, field)
                 obj_data[fieldname] = dehydrated_value
 
-            bundles.append({
-                'obj': obj,
-                'data': obj_data
-            })
-        kwargs['bundles'] = bundles
+            # Update the bundle in place
+            bundle['response_data'] = obj_data
         return (request, args, kwargs)
 
     @avoid(avoid=['delete'])
@@ -625,8 +677,11 @@ class ModelResource(Conduit):
 
     @avoid(avoid=['delete'])
     def add_resource_uri(self, request, *args, **kwargs):
+        """
+        Add the resource uri to each bundles response data
+        """
         for bundle in kwargs['bundles']:
-            bundle['data']['resource_uri'] = self._get_resource_uri(obj=bundle['obj'])
+            bundle['response_data']['resource_uri'] = self._get_resource_uri(obj=bundle['obj'])
         return request, args, kwargs
 
     def _to_basic_type(self, obj, field):
@@ -680,7 +735,7 @@ class ModelResource(Conduit):
     def produce_response_data(self, request, *args, **kwargs):
         data_dicts = []
         for bundle in kwargs['bundles']:
-            data_dicts.append(bundle['data'])
+            data_dicts.append(bundle['response_data'])
 
         if 'detail' in kwargs['pub'] or 'post' in kwargs['pub']:
             kwargs['response_data'] = data_dicts[0]
