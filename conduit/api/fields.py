@@ -158,6 +158,7 @@ class ManyToManyField(APIField):
     save_conduit = (
         'check_allowed_methods',
         'get_object_from_kwargs',
+        'bundles_from_objs',
         'hydrate_request_data',
         'bundles_from_request_data',
         'auth_get_detail',
@@ -255,6 +256,8 @@ class ManyToManyField(APIField):
             for methodname in self.save_conduit:
                 method = resource._get_method(methodname)
                 (request, args, kwargs) = method(resource, request, *args, **kwargs)
+                print method
+                print kwargs.keys()
             # Grab the dehydrated data and place it on the parent's bundle
             related_bundles.append(kwargs['bundles'][0])
 
