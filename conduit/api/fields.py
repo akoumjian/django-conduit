@@ -268,7 +268,13 @@ class ManyToManyField(APIField):
         related_manager = getattr(obj, self.attribute)
         for attached_obj in related_manager.all():
             if attached_obj not in related_objs:
-                related_manager.remove(attached_obj)
+                # Django m2m fields we can remove
+                if hasattr(related_manager, 'remove'):
+                    related_manager.remove(attached_obj)
+                # Only way to remove a reverse ForeignKey
+                # is to delete the object!
+                else:
+                    attached_obj.delete()
 
 
         # Now add any related objects that we created
