@@ -230,6 +230,7 @@ class ManyToManyField(APIField):
         # For ManyToMany, rel_obj_data should be formatted
         # as list!
         related_bundles = []
+        pk_field = self.resource_cls.Meta.pk_field
         for obj_data in rel_obj_data:
             # Expecting a resource_uri, so grab the pk, etc.
             if not self.embed:
@@ -242,7 +243,6 @@ class ManyToManyField(APIField):
                     'request_data': obj_data,
                 }
                 # Add field to kwargs as if we had hit detail url
-                pk_field = self.resource_cls.Meta.pk_field
                 if pk_field in obj_data:
                     # Updated an existing object
                     kwargs[pk_field] = obj_data[pk_field]
@@ -256,8 +256,6 @@ class ManyToManyField(APIField):
             for methodname in self.save_conduit:
                 method = resource._get_method(methodname)
                 (request, args, kwargs) = method(resource, request, *args, **kwargs)
-                print method
-                print kwargs.keys()
             # Grab the dehydrated data and place it on the parent's bundle
             related_bundles.append(kwargs['bundles'][0])
 
@@ -268,6 +266,14 @@ class ManyToManyField(APIField):
         related_objs = []
         for bundle in related_bundles:
             related_objs.append(bundle['obj'])
+        
+        # The parent object must be persisted before
+        # we can use related managers
+        if not getattr(obj, pk_field, None):
+            obj.save()
+        print obj
+        print obj.__class__
+        print getattr(obj, pk_field, None)
         related_manager = getattr(obj, self.attribute)
         for attached_obj in related_manager.all():
             if attached_obj not in related_objs:
