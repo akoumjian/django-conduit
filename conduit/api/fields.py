@@ -271,9 +271,6 @@ class ManyToManyField(APIField):
         # we can use related managers
         if not getattr(obj, pk_field, None):
             obj.save()
-        print obj
-        print obj.__class__
-        print getattr(obj, pk_field, None)
         related_manager = getattr(obj, self.attribute)
         for attached_obj in related_manager.all():
             if attached_obj not in related_objs:
