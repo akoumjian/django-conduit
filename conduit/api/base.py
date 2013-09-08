@@ -29,10 +29,11 @@ class Api(object):
         # Add to list of resources
         self._resources.append(resource_instance)
         # Add to dict of resources by model name
-        model = resource_instance.Meta.model
-        model_resources = self._by_model.get(model, [])
-        model_resources.append(resource_instance)
-        self._by_model[model] = model_resources
+        model = getattr(resource_instance.Meta, 'model', None)
+        if model:
+            model_resources = self._by_model.get(model, [])
+            model_resources.append(resource_instance)
+            self._by_model[model] = model_resources
 
         # Attach the api to the resource instance
         resource_instance.Meta.api = self
@@ -50,47 +51,11 @@ class Api(object):
         return url_patterns
 
 
-class ModelResource(Conduit):
+class Resource(Conduit):
     """
     RESTful api resource
     """
-
     class Meta:
-        conduit = (
-            'build_pub',
-            'check_allowed_methods',
-            'get_object_from_kwargs',
-            'process_filters',
-            'apply_filters',
-            'bundles_from_objs',
-            'json_to_python',
-            'hydrate_request_data',
-            'bundles_from_request_data',
-            'auth_get_detail',
-            'auth_get_list',
-            'auth_put_detail',
-            'auth_put_list',
-            'auth_post_detail',
-            'auth_post_list',
-            'auth_delete_detail',
-            'auth_delete_list',
-            'form_validate',
-            'limit_get_list',
-            'save_fk_objs',
-            'update_objs_from_data',
-            'save_m2m_objs',
-            'get_detail',
-            'get_list',
-            'put_detail',
-            'put_list',
-            'post_list',
-            'delete_detail',
-            'response_data_from_bundles',
-            'dehydrate_explicit_fields',
-            'add_resource_uri',
-            'produce_response_data',
-            'return_response'
-        )
         resource_name = None
         pk_field = 'id'
         api = None
@@ -113,73 +78,6 @@ class ModelResource(Conduit):
         allowed_ordering = []
         # Optional default ordering
         default_ordering = None
-
-    def create_json_response(self, py_obj, status=200):
-        content = simplejson.dumps(py_obj)
-        response = HttpResponse(content=content, status=status, content_type='application/json')
-        return response
-
-    def forbidden(self):
-        response = HttpResponse('', status=403, content_type='application/json')
-        raise HttpInterrupt(response)
-
-    def _update_from_dict(self, instance, data):
-        """
-        Update all non-relational fields in place
-        """
-        instance.__dict__.update(data)
-        return instance
-
-    def _get_explicit_fields(self):
-        fields = []
-        field_meta = getattr(self, 'Fields', None)
-        if field_meta:
-            for fieldname, field in field_meta.__dict__.items():
-                if not fieldname.startswith('_'):
-                    fields.append(field)
-        return fields
-
-    def _get_explicit_field_by_attribute(self, attribute=None):
-        explicit_fields = self._get_explicit_fields()
-        for field in explicit_fields:
-            if field.attribute == attribute:
-                return field
-        return None
-
-    def _get_explicit_field_by_type(self, related=None):
-        fields = self._get_explicit_fields()
-        field_attributes = []
-        for field in fields:
-            if getattr(field, 'related', related):
-                field_attributes.append(field.attribute)
-        return field_attributes
-
-    def _get_model_fields(self, obj=None):
-        """
-        Get all Django model fields on an obj
-        """
-        if not obj:
-            obj = self.Meta.model
-        field_names = obj._meta.get_all_field_names()
-        real_fields = []
-        for field_name in field_names:
-            if hasattr(obj, field_name):
-                real_fields.append(field_name)
-        return real_fields
-
-    def _get_type_fieldnames(self, obj=None, field_type=None):
-        """
-        Return all the fieldnames of a specific type
-        """
-        if not obj:
-            obj = self.Meta.model
-        fieldnames = self._get_model_fields()
-        matched_fieldnames = []
-        for fieldname in fieldnames:
-            field_tuple = obj._meta.get_field_by_name(fieldname)
-            if isinstance(field_tuple[0], field_type):
-                matched_fieldnames.append(fieldname)
-        return matched_fieldnames
 
     def _get_resource_name(self):
         resource_name = getattr(self.Meta, 'resource_name', None)
@@ -242,6 +140,15 @@ class ModelResource(Conduit):
 
         return patterns
 
+    def create_json_response(self, py_obj, status=200):
+        content = simplejson.dumps(py_obj)
+        response = HttpResponse(content=content, status=status, content_type='application/json')
+        return response
+
+    def forbidden(self):
+        response = HttpResponse('', status=403, content_type='application/json')
+        raise HttpInterrupt(response)
+
     def build_pub(self, request, *args, **kwargs):
         """
         Builds a list of keywords relevant to this request
@@ -264,6 +171,126 @@ class ModelResource(Conduit):
                 raise HttpInterrupt(response)
         return request, args, kwargs
 
+class ModelResource(Resource):
+    """
+    RESTful api resource based on Django Model
+    """
+    class Meta(Resource.Meta):
+        conduit = (
+            'build_pub',
+            'check_allowed_methods',
+            'get_object_from_kwargs',
+            'process_filters',
+            'apply_filters',
+            'bundles_from_objs',
+            'json_to_python',
+            'hydrate_request_data',
+            'bundles_from_request_data',
+            'auth_get_detail',
+            'auth_get_list',
+            'auth_put_detail',
+            'auth_put_list',
+            'auth_post_detail',
+            'auth_post_list',
+            'auth_delete_detail',
+            'auth_delete_list',
+            'form_validate',
+            'limit_get_list',
+            'save_fk_objs',
+            'update_objs_from_data',
+            'save_m2m_objs',
+            'get_detail',
+            'get_list',
+            'put_detail',
+            'put_list',
+            'post_list',
+            'delete_detail',
+            'response_data_from_bundles',
+            'dehydrate_explicit_fields',
+            'add_resource_uri',
+            'produce_response_data',
+            'return_response'
+        )
+
+    def _update_from_dict(self, instance, data):
+        """
+        Update all non-relational fields in place
+        """
+        instance.__dict__.update(data)
+        return instance
+
+    def _get_explicit_fields(self):
+        fields = []
+        field_meta = getattr(self, 'Fields', None)
+        if field_meta:
+            for fieldname, field in field_meta.__dict__.items():
+                if not fieldname.startswith('_'):
+                    fields.append(field)
+        return fields
+
+    def _get_explicit_field_by_attribute(self, attribute=None):
+        explicit_fields = self._get_explicit_fields()
+        for field in explicit_fields:
+            if field.attribute == attribute:
+                return field
+        return None
+
+    def _get_explicit_field_by_type(self, related=None):
+        fields = self._get_explicit_fields()
+        field_attributes = []
+        for field in fields:
+            if getattr(field, 'related', related):
+                field_attributes.append(field.attribute)
+        return field_attributes
+
+    def _get_model_fields(self, obj=None):
+        """
+        Get all Django model fields on an obj
+        """
+        if not obj:
+            obj = self.Meta.model
+        field_names = obj._meta.get_all_field_names()
+        real_fields = []
+        for field_name in field_names:
+            if hasattr(obj, field_name):
+                real_fields.append(field_name)
+        return real_fields
+
+    def _get_type_fieldnames(self, obj=None, field_type=None):
+        """
+        Return all the fieldnames of a specific type
+        """
+        if not obj:
+            obj = self.Meta.model
+        fieldnames = self._get_model_fields()
+        matched_fieldnames = []
+        for fieldname in fieldnames:
+            field_tuple = obj._meta.get_field_by_name(fieldname)
+            if isinstance(field_tuple[0], field_type):
+                matched_fieldnames.append(fieldname)
+        return matched_fieldnames
+
+    def build_pub(self, request, *args, **kwargs):
+        """
+        Builds a list of keywords relevant to this request
+        """
+        pub = []
+        pub.append(request.method.lower())
+        if kwargs.get(self.Meta.pk_field, None):
+            pub.append('detail')
+        else:
+            pub.append('list')
+        kwargs['pub'] = pub
+        return (request, args, kwargs)
+
+    def check_allowed_methods(self, request, *args, **kwargs):
+        allowed_methods = getattr(self.Meta, 'allowed_methods', ['get', 'put', 'post', 'delete'])
+        for keyword in kwargs['pub']:
+            if keyword in ['get', 'put', 'post', 'delete'] and keyword not in allowed_methods:
+                message = {'__all__': '{0} Method Not Allowed'.format(keyword.upper())}
+                response = self.create_json_response(py_obj=message, status=405)
+                raise HttpInterrupt(response)
+        return request, args, kwargs
 
     @subscribe(sub=['detail'])
     def get_object_from_kwargs(self, request, *args, **kwargs):
@@ -452,7 +479,7 @@ class ModelResource(Conduit):
         for data in kwargs['request_data']:
             data_dict = data.copy()
             if 'put' in kwargs['pub']:
-                # Updating existin object, so fetch it
+                # Updating existing object, so fetch it
                 try:
                     obj = self.Meta.model.objects.get(**{pk_field: data_dict[pk_field]})
                 except self.Meta.model.DoesNotExist:
@@ -463,7 +490,7 @@ class ModelResource(Conduit):
                     message = {'__all__': 'Data set missing id or key'}         
                     response = self.create_json_response(py_obj=message, status=400)
                     raise HttpInterrupt(response)
-            else:                     
+            else:
                 obj = self.Meta.model()
             bundle = {}
             bundle['request_data'] = data_dict
@@ -587,8 +614,12 @@ class ModelResource(Conduit):
         Update the objects in place with processed request data
         """
         for bundle in kwargs['bundles']:
-            self._update_from_dict(bundle['obj'], bundle['request_data'])
-            bundle['obj'].save()
+            obj = bundle['obj']
+            self._update_from_dict(obj, bundle['request_data'])
+            obj.save()
+            # Refetch the object so that we can return an accurate
+            # representation of the data that is being persisted 
+            bundle['obj'] = self.Meta.model.objects.get(**{self.Meta.pk_field: obj.pk})
         return request, args, kwargs
 
     @subscribe(sub=['post', 'put'])
@@ -781,5 +812,7 @@ class ModelResource(Conduit):
 
     def return_response(self, request, *args, **kwargs):
         response_data = kwargs.get('response_data', '')
+        print response_data['item_url']
+        print type(response_data['item_url'])
         response = self.create_json_response(py_obj=response_data, status=kwargs['status'])
         return response
