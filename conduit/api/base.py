@@ -239,7 +239,7 @@ class ModelResource(Resource):
         fields = self._get_explicit_fields()
         field_attributes = []
         for field in fields:
-            if getattr(field, 'related', related):
+            if getattr(field, 'related', None) == related:
                 field_attributes.append(field.attribute)
         return field_attributes
 
@@ -407,7 +407,8 @@ class ModelResource(Resource):
             return data
 
         if isinstance(field, models.IntegerField):
-            return int(data)
+            if data:
+                return int(data)
 
         if isinstance(field, models.FloatField):
             return float(data)
@@ -585,6 +586,8 @@ class ModelResource(Resource):
             fk_fieldnames = self._get_type_fieldnames(obj, models.ForeignKey)
             # Get explicit FK fields which are not Model fields
             fk_fieldnames.extend(self._get_explicit_field_by_type('fk'))
+            # Make sure names are unique
+            fk_fieldnames = set(fk_fieldnames)
             for fieldname in fk_fieldnames:
                 # Get the data to process
                 related_data = request_data[fieldname]
@@ -633,6 +636,7 @@ class ModelResource(Resource):
             m2m_fieldnames = self._get_type_fieldnames(obj, models.ManyToManyField)
             # Get explicit m2m fields which are not Model fields
             m2m_fieldnames.extend(self._get_explicit_field_by_type('m2m'))
+            m2m_fieldnames = set(m2m_fieldnames)
             for fieldname in m2m_fieldnames:
                 # Get the data to process
                 related_data = request_data[fieldname]
@@ -812,7 +816,5 @@ class ModelResource(Resource):
 
     def return_response(self, request, *args, **kwargs):
         response_data = kwargs.get('response_data', '')
-        print response_data['item_url']
-        print type(response_data['item_url'])
         response = self.create_json_response(py_obj=response_data, status=kwargs['status'])
         return response

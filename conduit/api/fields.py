@@ -101,7 +101,7 @@ class ForeignKeyField(APIField):
         self.setup_resource()
 
         # Expecting a resource_uri, so grab the pk, etc.
-        if not self.embed:
+        if not self.embed or isinstance(rel_obj_data, basestring):
             func, args, kwargs = resolve(rel_obj_data)
             kwargs['pub'] = ['get', 'detail']
             pk_field = self.resource_cls.Meta.pk_field
@@ -233,7 +233,7 @@ class ManyToManyField(APIField):
         pk_field = self.resource_cls.Meta.pk_field
         for obj_data in rel_obj_data:
             # Expecting a resource_uri, so grab the pk, etc.
-            if not self.embed:
+            if not self.embed or isinstance(rel_obj_data, basestring):
                 func, args, kwargs = resolve(obj_data)
                 kwargs['pub'] = ['get', 'detail']
 
@@ -250,6 +250,7 @@ class ManyToManyField(APIField):
                 else:
                     # Creating a new object
                     kwargs['pub'] = ['post', 'list']
+
 
             resource = self.resource_cls()
             resource.Meta.api = parent_inst.Meta.api
