@@ -91,7 +91,7 @@ class Resource(Conduit):
 
         try:
             if obj:
-                resource_uri = reverse(detail_view_name, kwargs={self.Meta.pk_field: obj.pk})
+                resource_uri = reverse(detail_view_name, kwargs={self.Meta.pk_field: getattr( obj, self.Meta.pk_field )})
             else:
                 resource_uri = reverse(list_view_name)
         except NoReverseMatch:
