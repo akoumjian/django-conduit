@@ -29,26 +29,6 @@ class MethodTestCase(ConduitTestCase):
         self.resource = TestResource()
         self.resource.Meta.api = Api(name='v1')
 
-    def test_allowed_methods(self):
-        # Limit allowed methods to get and put
-        self.resource.Meta.allowed_methods = ['get', 'put']
-
-        get = self.factory.get('/foo/')
-        put = self.factory.put('/foo/', {})
-        post = self.factory.post('/foo/', {})
-        delete = self.factory.delete('/foo')
-
-        self.assertRaises(HttpInterrupt, self.resource.check_allowed_methods, post, [], {})
-        self.assertRaises(HttpInterrupt, self.resource.check_allowed_methods, delete, [], {})
-        try:
-            self.resource.check_allowed_methods(get, [], {})
-        except HttpInterrupt:
-            self.fail('check_allowed_methods should not raise HttpInterrupt on valid method')
-        try:
-            self.resource.check_allowed_methods(put, [], {})
-        except HttpInterrupt:
-            self.fail('check_allowed_methods should not raise HttpInterrupt on valid method')
-
     def test_build_pub(self):
         detail_get = self.factory.get('/foo/1/')
         list_get = self.factory.get('/foo/')
@@ -62,6 +42,30 @@ class MethodTestCase(ConduitTestCase):
         request, args, kwargs = self.resource.build_pub(list_get)
         self.assertIn('list', kwargs['pub'])
         self.assertIn('get', kwargs['pub'])
+
+    def test_allowed_methods(self):
+        # Limit allowed methods to get and put
+        self.resource.Meta.allowed_methods = ['get', 'put']
+
+        get = self.factory.get('/foo/')
+        put = self.factory.put('/foo/', {})
+        post = self.factory.post('/foo/', {})
+        delete = self.factory.delete('/foo')
+
+        request, args, kwargs = self.resource.build_pub(post, [], {})
+        self.assertRaises(HttpInterrupt, self.resource.check_allowed_methods, post, *args, **kwargs)
+        request, args, kwargs = self.resource.build_pub(delete, [], {})
+        self.assertRaises(HttpInterrupt, self.resource.check_allowed_methods, delete, *args, **kwargs)
+        try:
+            request, args, kwargs = self.resource.build_pub(get, [], {})
+            self.resource.check_allowed_methods(request, *args, **kwargs)
+        except HttpInterrupt:
+            self.fail('check_allowed_methods should not raise HttpInterrupt on valid method')
+        try:
+            request, args, kwargs = self.resource.build_pub(put, [], {})
+            self.resource.check_allowed_methods(request, *args, **kwargs)
+        except HttpInterrupt:
+            self.fail('check_allowed_methods should not raise HttpInterrupt on valid method')
 
     def test_get_object_from_kwargs(self):
         instance = self.resource.Meta.model()
