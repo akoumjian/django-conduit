@@ -9,7 +9,7 @@ except ImportError:
 
 setup(
     name='django-conduit',
-    version='0.1.0-beta',
+    version='0.1.0',
     description='Easy and powerful REST APIs for Django.',
     author='Alec Koumjian',
     author_email='akoumjian@gmail.com',
