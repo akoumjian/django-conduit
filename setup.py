@@ -3,9 +3,16 @@
 try:
     from setuptools import setup
 except ImportError:
-    from ez_setup import use_setuptools
-    use_setuptools()
-    from setuptools import setup
+    from distutils.core import setup
+
+excludes = ['docs', 'example']
+
+packages = [
+    'conduit',
+    'conduit.api',
+    'conduit.management',
+    'conduit.management.commands',
+]
 
 setup(
     name='django-conduit',
@@ -14,16 +21,14 @@ setup(
     author='Alec Koumjian',
     author_email='akoumjian@gmail.com',
     url='https://github.com/akoumjian/django-conduit',
-    packages=[
-        'conduit',
-    ],
-    requires=[
-        'mimeparse',
-        'dateutil(>=1.5, !=2.0)',
-    ],
+    packages=packages,
+    package_dir={'conduit': 'conduit'},
+    include_package_data=True,
     install_requires=[
         'python_dateutil >= 2.1',
     ],
+    zip_safe=False,
+    license='Apache 2.0',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
