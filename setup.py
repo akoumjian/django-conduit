@@ -14,6 +14,15 @@ packages = [
     'conduit.management.commands',
 ]
 
+install_requires = [
+        'python_dateutil >= 2.1',
+]
+
+try:
+    import importlib
+except ImportError:
+    install_requires.append('importlib')
+
 setup(
     name='django-conduit',
     version='0.1.0',
