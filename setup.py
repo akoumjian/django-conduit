@@ -33,9 +33,7 @@ setup(
     packages=packages,
     package_dir={'conduit': 'conduit'},
     include_package_data=True,
-    install_requires=[
-        'python_dateutil >= 2.1',
-    ],
+    install_requires=install_requires,
     zip_safe=False,
     license='Apache 2.0',
     classifiers=[
