@@ -70,12 +70,12 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="related.html">Related Resources &amp; Objects</a></li>
-<li class="toctree-l1"><a class="reference internal" href="related.html#default-behavior">Default Behavior</a></li>
 <li class="toctree-l1"><a class="reference internal" href="related.html#related-resource-fields">Related Resource Fields</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="related.html#updating-related-resources">Updating Related Resources</a></li>
 <li class="toctree-l2"><a class="reference internal" href="related.html#customizing-related-resource-fields">Customizing Related Resource Fields</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="related.html#default-behavior">Default Behavior</a></li>
 <li class="toctree-l1"><a class="reference internal" href="access_authorization.html">Access, Authorization &amp; Permissions</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="access_authorization.html#allowed-methods">Allowed Methods</a></li>
 <li class="toctree-l2"><a class="reference internal" href="access_authorization.html#authorization-hooks">Authorization Hooks</a></li>
@@ -117,11 +117,9 @@
 <li><p class="first">Uncomment &#8216;api&#8217; in your INSTALLED_APPS</p>
 </li>
 <li><p class="first">Point your main URLconf (normally project_name/urls.py) to your new &#8216;api&#8217; app:</p>
-<div class="highlight-python"><pre>import api
-
-urlpatterns = patterns('',
+<div class="highlight-python"><pre>urlpatterns = patterns('',
     ...
-    url(r'^api/', include(api.urls)),
+    url(r'^api/', include('api.urls')),
     ...
 )</pre>
 </div>
@@ -136,6 +134,7 @@ urlpatterns = patterns('',
 <li><a class="reference internal" href="filtering_ordering.html"><em>Filtering &amp; Ordering</em></a></li>
 <li><a class="reference internal" href="related.html"><em>Related Resources</em></a></li>
 <li><a class="reference internal" href="access_authorization.html"><em>Access &amp; Authorization</em></a></li>
+<li><a class="reference internal" href="custom_fields.html"><em>Custom Fields</em></a></li>
 <li><a class="reference internal" href="forms_validation.html"><em>Forms &amp; Validation</em></a></li>
 <li><a class="reference internal" href="conduit.html"><em>Conduit Views</em></a></li>
 <li><tt class="xref doc docutils literal"><span class="pre">ModelResource</span></tt></li>

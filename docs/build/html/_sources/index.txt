@@ -45,11 +45,9 @@ Django-Conduit will automatically create your starting api based on your existin
 #. Uncomment 'api' in your INSTALLED_APPS
 #. Point your main URLconf (normally project_name/urls.py) to your new 'api' app::
 
-    import api
-
     urlpatterns = patterns('',
         ...
-        url(r'^api/', include(api.urls)),
+        url(r'^api/', include('api.urls')),
         ...
     )
 
@@ -66,6 +64,7 @@ Topics
 * :doc:`Filtering & Ordering<filtering_ordering>`
 * :doc:`Related Resources<related>`
 * :doc:`Access & Authorization<access_authorization>`
+* :doc:`Custom Fields<custom_fields>`
 * :doc:`Forms & Validation<forms_validation>`
 * :doc:`Conduit Views<conduit>`
 * :doc:`ModelResource<api/modelresource>`
