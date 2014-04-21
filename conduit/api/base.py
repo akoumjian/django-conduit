@@ -622,7 +622,7 @@ class ModelResource(Resource):
             obj.save()
             # Refetch the object so that we can return an accurate
             # representation of the data that is being persisted 
-            bundle['obj'] = self.Meta.model.objects.get(**{self.Meta.pk_field: obj.pk})
+            bundle['obj'] = self.Meta.model.objects.get(**{self.Meta.pk_field: getattr( obj, self.Meta.pk_field )})
         return request, args, kwargs
 
     @subscribe(sub=['post', 'put'])
