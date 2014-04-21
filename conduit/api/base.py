@@ -796,7 +796,6 @@ class ModelResource(Resource):
     @avoid(avoid=['delete'])
     def produce_response_data(self, request, *args, **kwargs):
         data_dicts = []
-        len(kwargs['bundles'])
         for bundle in kwargs['bundles']:
             data_dicts.append(bundle['response_data'])
 
