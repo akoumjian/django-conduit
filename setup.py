@@ -17,6 +17,7 @@ packages = [
 
 install_requires = [
         'python_dateutil >= 2.1',
+        'six >= 1.3.0'
 ]
 
 try:

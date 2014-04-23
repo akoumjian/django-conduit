@@ -1,8 +1,9 @@
+import json
+import six
 from django.http import HttpResponse
 from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
-import json
 from django.conf.urls import url
 from decimal import Decimal
 from dateutil import parser
@@ -424,13 +425,13 @@ class ModelResource(Resource):
             return data
 
         if isinstance(field, models.DateTimeField):
-            if isinstance(data, basestring):
+            if isinstance(data, six.string_types):
                 return parser.parse(data)
             else:
                 return data
 
         if isinstance(field, models.DateField):
-            if isinstance(data, basestring):
+            if isinstance(data, six.string_types):
                 return parser.parse(data)
             else:
                 return data

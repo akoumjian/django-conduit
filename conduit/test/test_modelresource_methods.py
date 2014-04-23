@@ -129,45 +129,45 @@ class MethodTestCase(ConduitTestCase):
     def test_hydrate_request_data(self):
         self.resource.Meta.model = Foo
         post_hydrate_data = {
-            u'bar': {
-                u'name': u'New Bar',
+            'bar': {
+                'name': 'New Bar',
             },
-            u'bazzes': [
+            'bazzes': [
                 {
-                    u'name': u'New Baz'
+                    'name': 'New Baz'
                 },
             ],
-            u'birthday': datetime.datetime(2013, 6, 19),
-            u'boolean': False,
-            u'created': datetime.datetime(2013, 6, 21, 1, 44, 57, 367956, tzinfo=dateutil.tz.tzutc()),
-            u'decimal': Decimal('110.12'),
-            u'file_field': u'test/test.txt',
-            u'float_field': 100000.123456789,
-            u'id': 1,
-            u'integer': 12,
-            u'name': u'Foo Name',
-            u'text': u'text goes here'
+            'birthday': datetime.datetime(2013, 6, 19),
+            'boolean': False,
+            'created': datetime.datetime(2013, 6, 21, 1, 44, 57, 367956, tzinfo=dateutil.tz.tzutc()),
+            'decimal': Decimal('110.12'),
+            'file_field': 'test/test.txt',
+            'float_field': 100000.123456789,
+            'id': 1,
+            'integer': 12,
+            'name': 'Foo Name',
+            'text': 'text goes here'
         }
 
         request_data = {
-            u'bar': {
-                u'name': u'New Bar',
+            'bar': {
+                'name': 'New Bar',
             },
-            u'bazzes': [
+            'bazzes': [
                 {
-                    u'name': u'New Baz',
+                    'name': 'New Baz',
                 }
             ],
-            u'birthday': u'2013-06-19',
-            u'boolean': False,
-            u'created': u'2013-06-21T01:44:57.367956+00:00',
-            u'decimal': '110.12',
-            u'file_field': u'test/test.txt',
-            u'float_field': 100000.123456789,
-            u'id': 1,
-            u'integer': 12,
-            u'name': u'Foo Name',
-            u'text': u'text goes here'
+            'birthday': '2013-06-19',
+            'boolean': False,
+            'created': '2013-06-21T01:44:57.367956+00:00',
+            'decimal': '110.12',
+            'file_field': 'test/test.txt',
+            'float_field': 100000.123456789,
+            'id': 1,
+            'integer': 12,
+            'name': 'Foo Name',
+            'text': 'text goes here'
         }
         kwargs = {
             'request_data': [request_data],
