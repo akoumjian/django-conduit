@@ -1,3 +1,4 @@
+import six
 from importlib import import_module
 from django.core.urlresolvers import resolve
 
@@ -65,7 +66,7 @@ class ForeignKeyField(APIField):
         # Field instantiation
         # If we are passed the string rep of a resource
         # class in python dot notation, import it
-        if isinstance(self.resource_cls, basestring):
+        if isinstance(self.resource_cls, six.string_types):
             self.resource_cls = import_class(self.resource_cls)
 
     def dehydrate(self, request, parent_inst, bundle=None):
@@ -101,7 +102,7 @@ class ForeignKeyField(APIField):
         self.setup_resource()
 
         # Expecting a resource_uri, so grab the pk, etc.
-        if not self.embed or isinstance(rel_obj_data, basestring):
+        if not self.embed or isinstance(rel_obj_data, six.string_types):
             func, args, kwargs = resolve(rel_obj_data)
             kwargs['pub'] = ['get', 'detail']
             pk_field = self.resource_cls.Meta.pk_field
@@ -190,7 +191,7 @@ class ManyToManyField(APIField):
         # Field instantiation
         # If we are passed the string rep of a resource
         # class in python dot notation, import it
-        if isinstance(self.resource_cls, basestring):
+        if isinstance(self.resource_cls, six.string_types):
             self.resource_cls = import_class(self.resource_cls)
 
     def dehydrate(self, request, parent_inst, bundle=None):
@@ -233,7 +234,7 @@ class ManyToManyField(APIField):
         pk_field = self.resource_cls.Meta.pk_field
         for obj_data in rel_obj_data:
             # Expecting a resource_uri, so grab the pk, etc.
-            if not self.embed or isinstance(rel_obj_data, basestring):
+            if not self.embed or isinstance(rel_obj_data, six.string_types):
                 func, args, kwargs = resolve(obj_data)
                 kwargs['pub'] = ['get', 'detail']
 

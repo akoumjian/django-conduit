@@ -119,7 +119,7 @@ class MethodTestCase(ConduitTestCase):
             'fieldname': 'fieldvalue',
         }
         data = json.dumps(py_data)
-        detail_put = self.factory.put('/bar/1/', data)
+        detail_put = self.factory.put('/bar/1/', data, content_type='application/json')
         kwargs = {
             'pub': ['put']
         }
