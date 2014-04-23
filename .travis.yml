@@ -14,6 +14,6 @@ env:
 install:
     - pip install -q Django==$DJANGO --use-mirrors
     - pip install -q . --use-mirrors
-    - pip install -q requirements.txt--use-mirrors
+    - pip install -q requirements.txt --use-mirrors
 
 script: python example/manage.py test conduit
