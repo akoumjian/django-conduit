@@ -10,7 +10,7 @@ excludes = ['docs', 'example']
 packages = [
     'conduit',
     'conduit.api',
-    'conduit.tests',
+    'conduit.test',
     'conduit.management',
     'conduit.management.commands',
 ]

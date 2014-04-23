@@ -3,7 +3,7 @@ from conduit.api import ModelResource, Api
 import example
 import example.urls
 from example.models import Bar
-from conduit.tests.testcases import ConduitTestCase
+from conduit.test.testcases import ConduitTestCase
 import uuid
 
 

@@ -7,7 +7,7 @@ from conduit.api import ModelResource, Api
 from conduit.api.fields import ForeignKeyField, ManyToManyField
 from conduit.exceptions import HttpInterrupt
 from example.models import Bar, Foo, Baz
-from conduit.tests.testcases import ConduitTestCase
+from conduit.test.testcases import ConduitTestCase
 
 
 class MethodTestCase(ConduitTestCase):
