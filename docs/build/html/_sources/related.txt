@@ -1,40 +1,13 @@
 Related Resources & Objects
 ===========================
 
-``django-conduit`` treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner. You can use related resources to treat them similarly to related models, or you can default to their simple behavior as pointers to primary keys.
-
-Default Behavior
-================
-
-By default, conduit will serialize your model's related object fields by their raw value. A ForeignKey field will produce the primary key of your related object. A ManyToMany field will product a list of primary keys.
-
-An example resource Foo has one FK and one M2M field::
-
-	class Foo(models.Model):
-		name = models.CharField(max_length=255)
-		bar = models.ForeignKey(Bar)
-		bazzes = models.ManyToManyField(Baz)
-
-Will produce a detail response looking like this::
-
-	{
-		"name": "My Foo",
-		"bar": 45,
-		"bazzes": [5, 87, 200],
-		"resource_uri": "/api/v1/foo/1/"
-	}
-
-When updating a ForeignKey field, conduit will set the model's [field]_id to the integer you send it. Be careful not to set it to a nonexistent related model, since there are not constraint checks done when saved to the database.
-
-Similarly, when updated a ManyToMany field and give it a nonexistent primary key, the add will silently fail and the invalid primary key will not enter the ManyToMany list.
-
-.. important:: Updating raw primary keys will not produce errors for invalid keys. 
+``django-conduit`` treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner. You can use related resources to treat them similarly to Django's ORM, or you can default to their simple behavior as pointers to primary keys.
 
 
 Related Resource Fields
 =======================
 
-A much more useful approach is to point to a related ModelResource for your related fields. You can use a related resource by referencing it in the Fields metaclass. The below FooResource example using two related resource fields::
+Conduit lets you use other ModelResources for your related object fields. You can use a related resource by referencing it in the Fields metaclass. The below FooResource example using two related resource fields::
 
 	class FooResource(ModelResource):
 	    class Meta(ModelResource.Meta):
@@ -172,3 +145,30 @@ A subclassed FK field which adds a custom additional step to the pipeline would 
 	        'save_m2m_objs',
 	    )
 
+
+Default Behavior
+=======================
+
+By default, conduit will serialize your model's related object fields by their raw value. A ForeignKey field will produce the primary key of your related object. A ManyToMany field will product a list of primary keys.
+
+An example resource Foo has one FK and one M2M field::
+
+	class Foo(models.Model):
+		name = models.CharField(max_length=255)
+		bar = models.ForeignKey(Bar)
+		bazzes = models.ManyToManyField(Baz)
+
+Will produce a detail response looking like this::
+
+	{
+		"name": "My Foo",
+		"bar": 45,
+		"bazzes": [5, 87, 200],
+		"resource_uri": "/api/v1/foo/1/"
+	}
+
+When updating a ForeignKey field, conduit will set the model's [field]_id to the integer you send it. Be careful not to set it to a nonexistent related model, since there are not constraint checks done when saved to the database.
+
+Similarly, when updated a ManyToMany field and give it a nonexistent primary key, the add will silently fail and the invalid primary key will not enter the ManyToMany list.
+
+.. important:: Updating raw primary keys will not produce errors for invalid keys. 

@@ -14,7 +14,7 @@ The ``default_filters`` dict on a ModelResource's Meta class will apply the list
 				'name__startswith': 'lamp'
 			}
 
-The default filters will eventually be applied to the queryset during the ``pre_get_list`` method, resulting in something like this::
+The default filters will eventually be applied to the queryset during the ``apply_filters`` method, resulting in something like this::
 
 	filtered_instances = Foo.objects.filter(name__startswith='lamp')
 

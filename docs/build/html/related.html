@@ -23,6 +23,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
     <link rel="top" title="django-conduit 0.0.1 documentation" href="index.html" />
     <link rel="next" title="Access, Authorization &amp; Permissions" href="access_authorization.html" />
     <link rel="prev" title="Filtering and Ordering" href="filtering_ordering.html" /> 
@@ -51,37 +52,11 @@
             
   <div class="section" id="related-resources-objects">
 <h1>Related Resources &amp; Objects<a class="headerlink" href="#related-resources-objects" title="Permalink to this headline">¶</a></h1>
-<p><tt class="docutils literal"><span class="pre">django-conduit</span></tt> treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner. You can use related resources to treat them similarly to related models, or you can default to their simple behavior as pointers to primary keys.</p>
-</div>
-<div class="section" id="default-behavior">
-<h1>Default Behavior<a class="headerlink" href="#default-behavior" title="Permalink to this headline">¶</a></h1>
-<p>By default, conduit will serialize your model&#8217;s related object fields by their raw value. A ForeignKey field will produce the primary key of your related object. A ManyToMany field will product a list of primary keys.</p>
-<p>An example resource Foo has one FK and one M2M field:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
-        <span class="n">bar</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Bar</span><span class="p">)</span>
-        <span class="n">bazzes</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ManyToManyField</span><span class="p">(</span><span class="n">Baz</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Will produce a detail response looking like this:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
-        <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;My Foo&quot;</span><span class="p">,</span>
-        <span class="s">&quot;bar&quot;</span><span class="p">:</span> <span class="mi">45</span><span class="p">,</span>
-        <span class="s">&quot;bazzes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">87</span><span class="p">,</span> <span class="mi">200</span><span class="p">],</span>
-        <span class="s">&quot;resource_uri&quot;</span><span class="p">:</span> <span class="s">&quot;/api/v1/foo/1/&quot;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>When updating a ForeignKey field, conduit will set the model&#8217;s [field]_id to the integer you send it. Be careful not to set it to a nonexistent related model, since there are not constraint checks done when saved to the database.</p>
-<p>Similarly, when updated a ManyToMany field and give it a nonexistent primary key, the add will silently fail and the invalid primary key will not enter the ManyToMany list.</p>
-<div class="admonition important">
-<p class="first admonition-title">Important</p>
-<p class="last">Updating raw primary keys will not produce errors for invalid keys.</p>
-</div>
+<p><tt class="docutils literal"><span class="pre">django-conduit</span></tt> treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner. You can use related resources to treat them similarly to Django&#8217;s ORM, or you can default to their simple behavior as pointers to primary keys.</p>
 </div>
 <div class="section" id="related-resource-fields">
 <h1>Related Resource Fields<a class="headerlink" href="#related-resource-fields" title="Permalink to this headline">¶</a></h1>
-<p>A much more useful approach is to point to a related ModelResource for your related fields. You can use a related resource by referencing it in the Fields metaclass. The below FooResource example using two related resource fields:</p>
+<p>Conduit lets you use other ModelResources for your related object fields. You can use a related resource by referencing it in the Fields metaclass. The below FooResource example using two related resource fields:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">FooResource</span><span class="p">(</span><span class="n">ModelResource</span><span class="p">):</span>
     <span class="k">class</span> <span class="nc">Meta</span><span class="p">(</span><span class="n">ModelResource</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
         <span class="n">model</span> <span class="o">=</span> <span class="n">Foo</span>
@@ -211,6 +186,32 @@
 </div>
 </div>
 </div>
+<div class="section" id="default-behavior">
+<h1>Default Behavior<a class="headerlink" href="#default-behavior" title="Permalink to this headline">¶</a></h1>
+<p>By default, conduit will serialize your model&#8217;s related object fields by their raw value. A ForeignKey field will produce the primary key of your related object. A ManyToMany field will product a list of primary keys.</p>
+<p>An example resource Foo has one FK and one M2M field:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">bar</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Bar</span><span class="p">)</span>
+        <span class="n">bazzes</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ManyToManyField</span><span class="p">(</span><span class="n">Baz</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Will produce a detail response looking like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+        <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;My Foo&quot;</span><span class="p">,</span>
+        <span class="s">&quot;bar&quot;</span><span class="p">:</span> <span class="mi">45</span><span class="p">,</span>
+        <span class="s">&quot;bazzes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">87</span><span class="p">,</span> <span class="mi">200</span><span class="p">],</span>
+        <span class="s">&quot;resource_uri&quot;</span><span class="p">:</span> <span class="s">&quot;/api/v1/foo/1/&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>When updating a ForeignKey field, conduit will set the model&#8217;s [field]_id to the integer you send it. Be careful not to set it to a nonexistent related model, since there are not constraint checks done when saved to the database.</p>
+<p>Similarly, when updated a ManyToMany field and give it a nonexistent primary key, the add will silently fail and the invalid primary key will not enter the ManyToMany list.</p>
+<div class="admonition important">
+<p class="first admonition-title">Important</p>
+<p class="last">Updating raw primary keys will not produce errors for invalid keys.</p>
+</div>
+</div>
 
 
           </div>
@@ -221,12 +222,12 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Related Resources &amp; Objects</a></li>
-<li><a class="reference internal" href="#default-behavior">Default Behavior</a></li>
 <li><a class="reference internal" href="#related-resource-fields">Related Resource Fields</a><ul>
 <li><a class="reference internal" href="#updating-related-resources">Updating Related Resources</a></li>
 <li><a class="reference internal" href="#customizing-related-resource-fields">Customizing Related Resource Fields</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#default-behavior">Default Behavior</a></li>
 </ul>
 
   <h4>Previous topic</h4>
