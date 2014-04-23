@@ -13,7 +13,6 @@ class SelfDescModelResource(ModelResource):
 
     Used in auto building api boilerplate
     """
-
     def __to_string__(self):
         buff = ''
         buff += '\nclass {0}Resource(ModelResource):'.format(self.Meta.model.__name__)
