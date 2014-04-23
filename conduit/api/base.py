@@ -47,7 +47,7 @@ class Api(object):
     def urls(self):
         url_patterns = []
         for resource in self._resources:
-            url_patterns.extend(resource._get_url_patterns())
+            url_patterns.extend(resource.urls)
         return url_patterns
 
 
@@ -139,6 +139,10 @@ class Resource(Conduit):
         patterns.append(detail_view)
 
         return patterns
+
+    @property
+    def urls(self):
+        return self._get_url_patterns()
 
     def create_json_response(self, py_obj, status=200):
         content = simplejson.dumps(py_obj)
