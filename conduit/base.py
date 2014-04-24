@@ -18,7 +18,8 @@ class Conduit(object):
             module = import_module(module)
             cls = getattr(module, cls)
             method = getattr(cls, method)
-        return ( method, cls )
+        bound_method = method.__get__( self, cls )
+        return bound_method
 
     def view(self, request, *args, **kwargs):
         """
@@ -31,12 +32,10 @@ class Conduit(object):
             # all model changes will be rolled back
             with transaction.commit_on_success():
                 for method_string in self.Meta.conduit[:-1]:
-                    method, cls = self._get_method(method_string)
-                    bound_method = method.__get__( self, cls )
+                    bound_method = self._get_method(method_string)
                     (request, args, kwargs,) = bound_method( request, *args, **kwargs)
         except HttpInterrupt as e:
             return e.response
 
-        response_method, cls = self._get_method(self.Meta.conduit[-1])
-        bound_response_method = response_method.__get__( self, cls )
+        bound_response_method = self._get_method(self.Meta.conduit[-1])
         return bound_response_method(request, *args, **kwargs)
