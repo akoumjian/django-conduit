@@ -17,3 +17,10 @@ install:
     - pip install -q -r requirements.txt --use-mirrors
 
 script: python example/manage.py test conduit
+
+matrix:
+  exclude:
+    - python: "3.2"
+      env: DJANGO=1.4
+    - python: "3.3"
+      env: DJANGO=1.4
