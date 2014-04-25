@@ -392,7 +392,7 @@ class ModelResource(Resource):
     def json_to_python(self, request, *args, **kwargs):
         if request.body:
             data = request.body
-            kwargs['request_data'] = json.loads(str(data))
+            kwargs['request_data'] = json.loads(data.decode('UTF-8'))
         return (request, args, kwargs)
 
     def _from_basic_type(self, field, data):
@@ -605,7 +605,7 @@ class ModelResource(Resource):
                     except HttpInterrupt as e:
                         # Raise the error but specify it as occuring within
                         # the related field
-                        error_dict = {fieldname: json.loads(str(e.response.content))}
+                        error_dict = {fieldname: json.loads(e.response.content)}
                         response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
                         raise HttpInterrupt(response)
 
@@ -654,7 +654,7 @@ class ModelResource(Resource):
                     except HttpInterrupt as e:
                         # Raise the error but specify it as occuring within
                         # the related field
-                        error_dict = {fieldname: json.loads(str(e.response.content))}
+                        error_dict = {fieldname: json.loads(e.response.content)}
                         response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
                         raise HttpInterrupt(response)
 
