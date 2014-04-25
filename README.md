@@ -3,6 +3,8 @@ Django-Conduit
 
 Easy and powerful REST APIs for Django.
 
+[![Build Status](https://travis-ci.org/akoumjian/django-conduit.svg?branch=master)](https://travis-ci.org/akoumjian/django-conduit)
+
 Documentation
 -------------
 
