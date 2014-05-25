@@ -1,3 +1,5 @@
+![Conduit logo](conduit.png)
+
 Django-Conduit
 ==============
 
