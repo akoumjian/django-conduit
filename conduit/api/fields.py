@@ -291,3 +291,64 @@ class ManyToManyField(APIField):
             related_manager.add(related_obj)
 
         return related_objs
+
+
+class GenericForeignKeyField(APIField):
+    dehydrate_conduit = (
+        'bundles_from_objs',
+        # 'auth_get_detail',
+        # 'auth_get_list',
+        # 'auth_put_detail',
+        # 'auth_put_list',
+        # 'auth_post_detail',
+        # 'auth_post_list',
+        # 'auth_delete_detail',
+        # 'auth_delete_list',
+        'response_data_from_bundles',
+        'dehydrate_explicit_fields',
+        'add_resource_uri',
+    )
+
+    def __init__(self, attribute=None, resource_cls=None, embed=False):
+        self.related = 'gfk'
+        self.attribute = attribute
+        self.embed = embed
+        self.resource_cls = resource_cls
+
+    def setup_resource(self, resource_model):
+        """
+        Lazy load importing resource cls
+        """
+        # If we don't do this, imports will fail when trying
+        # to import resources in the same file as the related
+        # Field instantiation
+        # If we are passed the string rep of a resource
+        # class in python dot notation, import it
+        try:
+            self.resource_cls = self.resource_cls[resource_model]
+        except TypeError:
+            pass
+
+        if isinstance(self.resource_cls, six.string_types):
+            self.resource_cls = import_class(self.resource_cls)
+
+    def dehydrate(self, request, parent_inst, bundle=None):
+        obj = getattr(bundle['obj'], self.attribute)
+        model = type(obj)
+
+        self.setup_resource(model.__name__)
+        resource = self.resource_cls()
+
+        if self.embed:
+            args = []
+            kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
+            for methodname in self.dehydrate_conduit:
+                bound_method = resource._get_method(methodname)
+                (request, args, kwargs,) = bound_method(request, *args, **kwargs)
+            # Grab the dehydrated data and place it on the parent's bundle
+            related_bundle = kwargs['bundles'][0]
+            bundle['response_data'][self.attribute] = related_bundle['response_data']
+        else:
+            resource_uri = resource._get_resource_uri(obj=obj)
+            bundle['response_data'][self.attribute] = resource_uri
+        return bundle
