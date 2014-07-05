@@ -309,35 +309,28 @@ class GenericForeignKeyField(APIField):
         'add_resource_uri',
     )
 
-    def __init__(self, attribute=None, resource_cls=None, embed=False):
+    def __init__(self, attribute=None, resource_map=None, embed=False):
         self.related = 'gfk'
         self.attribute = attribute
         self.embed = embed
-        self.resource_cls = resource_cls
+        self.resource_map = resource_map
 
-    def setup_resource(self, resource_model):
+    def fetch_resource(self, model_name):
         """
-        Lazy load importing resource cls
+        Returns an instance of a Resource from a GenericForeignKeyField
+        resource_map attribute.
         """
-        # If we don't do this, imports will fail when trying
-        # to import resources in the same file as the related
-        # Field instantiation
-        # If we are passed the string rep of a resource
-        # class in python dot notation, import it
-        try:
-            self.resource_cls = self.resource_cls[resource_model]
-        except TypeError:
-            pass
+        resource = self.resource_map[model_name]
 
-        if isinstance(self.resource_cls, six.string_types):
-            self.resource_cls = import_class(self.resource_cls)
+        if isinstance(resource, six.string_types):
+            resource = import_class(resource)
+        return resource()
 
     def dehydrate(self, request, parent_inst, bundle=None):
         obj = getattr(bundle['obj'], self.attribute)
         model = type(obj)
 
-        self.setup_resource(model.__name__)
-        resource = self.resource_cls()
+        resource = self.fetch_resource(model.__name__)
 
         if self.embed:
             args = []
