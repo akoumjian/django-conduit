@@ -315,12 +315,19 @@ class GenericForeignKeyField(APIField):
         self.embed = embed
         self.resource_map = resource_map
 
-    def fetch_resource(self, model_name):
+    def fetch_resource(self, model):
         """
         Returns an instance of a Resource from a GenericForeignKeyField
-        resource_map attribute.
+        resource_map attribute. First looks for `app_name.Model_name`, falling
+        back to `Model_name`.
         """
-        resource = self.resource_map[model_name]
+        app_label = model._meta.app_label
+        model_name = model.__name__
+        
+        try:
+            resource = self.resource_map['.'.join([app_label, model_name])]
+        except KeyError:
+            resource = self.resource_map[model_name]
 
         if isinstance(resource, six.string_types):
             resource = import_class(resource)
@@ -329,8 +336,7 @@ class GenericForeignKeyField(APIField):
     def dehydrate(self, request, parent_inst, bundle=None):
         obj = getattr(bundle['obj'], self.attribute)
         model = type(obj)
-
-        resource = self.fetch_resource(model.__name__)
+        resource = self.fetch_resource(model)
 
         if self.embed:
             args = []
