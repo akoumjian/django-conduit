@@ -296,17 +296,37 @@ class ManyToManyField(APIField):
 class GenericForeignKeyField(APIField):
     dehydrate_conduit = (
         'bundles_from_objs',
-        # 'auth_get_detail',
-        # 'auth_get_list',
-        # 'auth_put_detail',
-        # 'auth_put_list',
-        # 'auth_post_detail',
-        # 'auth_post_list',
-        # 'auth_delete_detail',
-        # 'auth_delete_list',
+        'auth_get_detail',
+        'auth_get_list',
+        'auth_put_detail',
+        'auth_put_list',
+        'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
         'response_data_from_bundles',
         'dehydrate_explicit_fields',
         'add_resource_uri',
+    )
+
+    save_conduit = (
+        'check_allowed_methods',
+        'get_object_from_kwargs',
+        'bundles_from_objs',
+        'hydrate_request_data',
+        'bundles_from_request_data',
+        'auth_get_detail',
+        'auth_get_list',
+        'auth_put_detail',
+        'auth_put_list',
+        'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
+        'form_validate',
+        'save_fk_objs',
+        'update_objs_from_data',
+        'save_m2m_objs',
     )
 
     def __init__(self, attribute=None, resource_map=None, embed=False):
