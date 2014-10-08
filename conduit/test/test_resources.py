@@ -11,7 +11,7 @@ from example.models import Bar, Baz, Foo, Item
 
 
 class ResourceTestCase(ConduitTestCase):
-    def test_create_resource(self):
+    def test_basic_resource_post_list(self):
         obj = {
             'name': 'A new Bar'
         }
@@ -29,7 +29,7 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(bar.name, obj['name'])
         self.assertEqual(Bar.objects.count(), 1)
 
-    def test_create_fk_resource(self):
+    def test_resource_post_list(self):
         obj = {
             'bar': {
                 'name': 'New Bar',
@@ -66,7 +66,7 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(Baz.objects.count(), 2)
         self.assertEqual(Foo.objects.count(), 1)
 
-    def test_create_gfk_resource(self):
+    def test_gfk_resource_post_list(self):
         content_type = ContentType.objects.get(name='bar')
 
         obj_data = {
@@ -75,12 +75,12 @@ class ResourceTestCase(ConduitTestCase):
         }
         data = json.dumps(obj_data)
 
-        post_detail = self.factory.post('/item/', data, content_type='application/json')
+        post_list = self.factory.post('/item/', data, content_type='application/json')
 
         item_resource = ItemResource()
         item_resource.Meta.api = Api(name='v1')
 
-        response = item_resource.view(post_detail, [], {})
+        response = item_resource.view(post_list, [], {})
 
         self.assertEqual(Item.objects.count(), 1)
 
