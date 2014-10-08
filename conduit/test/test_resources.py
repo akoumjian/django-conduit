@@ -84,7 +84,7 @@ class ResourceTestCase(ConduitTestCase):
 
         self.assertEqual(Item.objects.count(), 1)
 
-    def test_gfk_resource_detail(self):
+    def test_gfk_resource_get_detail(self):
         bar = Bar.objects.create(name='A bar')
         content_type = ContentType.objects.get(name='bar')
         item = Item.objects.create(
