@@ -61,7 +61,7 @@ class ResourceFormatTestCase(ConduitTestCase):
 
         # override urls
         self.original_urls = example.urls.urlpatterns
-        example.urls.urlpatterns += patterns(
+        example.urls.urlpatterns = patterns(
             '',
             url(r'^api_as_func/', include(self.resource_as_func.Meta.api.urls)),
             url(r'^api_as_mixin/', include(self.resource_as_mixin.Meta.api.urls)),
