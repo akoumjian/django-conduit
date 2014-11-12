@@ -4,6 +4,8 @@ from django.http import HttpResponse
 from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
+from django.contrib.gis.db import models as geomodels
+from django.contrib.gis.geos import fromstr
 from django.conf.urls import url
 from decimal import Decimal
 from dateutil import parser
@@ -439,6 +441,9 @@ class ModelResource(Resource):
         if isinstance(field, models.DecimalField):
             return Decimal(data)
 
+        if isinstance(field, geomodels.GeometryField):
+            return fromstr(data)
+
         if isinstance(field, models.ForeignKey):
             return data
 
@@ -786,6 +791,9 @@ class ModelResource(Resource):
             return field.value_to_string(obj)
 
         if isinstance(field, models.DecimalField):
+            return field.value_to_string(obj)
+
+        if isinstance(field, geomodels.GeometryField):
             return field.value_to_string(obj)
 
         if isinstance(field, models.ForeignKey):

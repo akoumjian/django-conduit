@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class Bar(models.Model):
     name = models.CharField(max_length=250)
 
@@ -21,3 +20,4 @@ class Foo(models.Model):
     file_field = models.FileField(upload_to='test')
     bar = models.ForeignKey(Bar, null=True)
     bazzes = models.ManyToManyField(Baz)
+
