@@ -19,7 +19,7 @@ install:
 
 before_script:
     - psql -c 'create database geoexample;' -U postgres
-    - psql -U postgres -c "create extension postgis"
+    - psql -U postgres -d geoexample -c "create extension postgis"
 
 script: python example/manage.py test conduit
 
