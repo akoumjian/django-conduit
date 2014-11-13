@@ -7,7 +7,10 @@ set -ev
 #    psql -c 'create database geoexample;' -U postgres
 #    psql -U postgres -d geoexample -c "create extension postgis"
 #fi
-echo env
+
+# print environment variables
+env
+
 POSTGIS_SQL_PATH=`pg_config --sharedir`/contrib/postgis-2.0
 # Creating the template spatial database.
 createdb -U postgres -E UTF8 template_postgis
