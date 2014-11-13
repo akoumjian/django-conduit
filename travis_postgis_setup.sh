@@ -14,7 +14,7 @@ env
 POSTGIS_SQL_PATH=`pg_config --sharedir`/contrib/postgis-2.0
 # Creating the template spatial database.
 createdb -U postgres -E UTF8 template_postgis
-createlang -U postgres -d template_postgis plpgsql # Adding PLPGSQL language support.
+#createlang -U postgres -d template_postgis plpgsql # Adding PLPGSQL language support.
 # Allows non-superusers the ability to create from this template
 psql -U postgres -d postgres -c "UPDATE pg_database SET datistemplate='true' WHERE datname='template_postgis';"
 # Loading the PostGIS SQL routines
