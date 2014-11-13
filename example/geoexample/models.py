@@ -32,8 +32,8 @@ class GeoFoo(geomodels.Model):
     birthday = geomodels.DateField(auto_now_add=True)
     decimal = geomodels.DecimalField(max_digits=5, decimal_places=2)
     file_field = geomodels.FileField(upload_to='test')
-    bar = geomodels.ForeignKey(GeoBar, null=True)
-    bazzes = geomodels.ManyToManyField(GeoBaz)
+    geobar = geomodels.ForeignKey(GeoBar, null=True)
+    geobazzes = geomodels.ManyToManyField(GeoBaz)
     # required manager
     objects = geomodels.GeoManager()
 
