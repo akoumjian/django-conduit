@@ -17,6 +17,10 @@ install:
     - pip install -q . --use-mirrors
     - pip install -q -r requirements.txt --use-mirrors
 
+before_script:
+    - psql -c 'create database geoexample;' -U postgres
+    - psql -U postgres -c "create extension postgis"
+
 script: python example/manage.py test conduit
 
 matrix:
