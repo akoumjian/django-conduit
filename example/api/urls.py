@@ -8,6 +8,8 @@ api = Api()
 api.register(BarResource())
 api.register(BazResource())
 api.register(FooResource())
+
+# register geomanager resources
 api.register(GeoBarResource())
 api.register(GeoBazResource())
 api.register(GeoFooResource())

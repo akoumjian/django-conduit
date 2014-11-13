@@ -7,7 +7,7 @@ class GeoBar(geomodels.Model):
     objects = geomodels.GeoManager()
 
     class Meta:
-        app_label = 'geodb'
+        app_label = 'geoexample'
 
 
 class GeoBaz(geomodels.Model):
@@ -17,7 +17,7 @@ class GeoBaz(geomodels.Model):
     objects = geomodels.GeoManager()
 
     class Meta:
-        app_label = 'geodb'
+        app_label = 'geoexample'
 
 
 
@@ -38,7 +38,7 @@ class GeoFoo(geomodels.Model):
     objects = geomodels.GeoManager()
 
     class Meta:
-        app_label = 'geodb'
+        app_label = 'geoexample'
 
 
 

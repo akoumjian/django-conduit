@@ -4,7 +4,6 @@ from conduit.api.fields import ForeignKeyField, ManyToManyField
 from example.models import Bar, Baz, Foo
 from example.geodb.models import GeoBar, GeoBaz, GeoFoo
 
-
 class BarResource(ModelResource):
     class Meta(ModelResource.Meta):
         model = Bar
@@ -23,7 +22,11 @@ class FooResource(ModelResource):
         bar = ForeignKeyField(attribute='bar', resource_cls=BarResource, embed=True)
         bazzes = ManyToManyField(attribute='bazzes', resource_cls=BazResource, embed=True)
 
-
+#
+#
+#  resources based on GeoManager(s)
+#
+#
 class GeoBarResource(ModelResource):
     class Meta(ModelResource.Meta):
         model = GeoBar

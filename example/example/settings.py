@@ -26,13 +26,29 @@ DATABASES = {
         'PORT': '',                      # Set to empty string for default.
     } ,
     'geodefault': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis' , #'django.db.backends.sqlite3' Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'geoexample',                      # Or path to database file if using sqlite3.
-        # The following settings are not used with sqlite3:
+        'ENGINE': 'django.contrib.gis.db.backends.postgis' , 
+        'NAME': 'geoexample',                      
+        # 
+        #  NOTE: USER and PASSWORD below are defaulted to what Travis CI expects.
+        #  To run local tests you will need to:
+        #
+        #  0. create a spatially enabled database called 'geoexample'
+        #  ( see django-conduit/travis_postgis_setup.sh for examples )
+        #
+        #  1. set your pg_hba.conf postgres user METHOD to 'trust' ( which some people might not like ):
+        #  local   all             postgres                                trust
+        #
+        #  2. set your pg_hba.conf postgres user METHOD to 'md5' and change the PASSWORD below to match your postgres user
+        #  local   all             postgres                                md5
+        #
+        #  3. remember to restart postgresql server with new configs
+        #  sudo /etc/init.d/postgresql restart
+        #
+        #
         'USER': 'postgres',
-        'PASSWORD': '', # Travis CI does not have a password for this
-        'HOST': '',                      # Empty for localhost through domain sockets or '127.0.0.1' for localhost through TCP.
-        'PORT': '',                      # Set to empty string for default.
+        'PASSWORD': '',   
+        'HOST': '',                # Empty for localhost through domain sockets or '127.0.0.1' for localhost through TCP.
+        'PORT': '',                # Set to empty string for default.
     }
 }
 
@@ -143,7 +159,7 @@ INSTALLED_APPS = (
     'conduit',
     # 'api',
     'example',
-    'example.geodb',
+    'example.geoexample',
 )
 
 # A sample logging configuration. The only tangible logging
