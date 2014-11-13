@@ -18,8 +18,7 @@ install:
     - pip install -q -r requirements.txt --use-mirrors
 
 before_script:
-    - psql -c 'create database geoexample;' -U postgres
-    - psql -U postgres -d geoexample -c "create extension postgis"
+    - bash ./travis_postgis_setup.sh
 
 script: python example/manage.py test conduit
 
