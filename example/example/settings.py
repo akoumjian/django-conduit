@@ -159,7 +159,7 @@ INSTALLED_APPS = (
     'conduit',
     # 'api',
     'example',
-    'example.geoexample',
+    'geoexample',
 )
 
 # A sample logging configuration. The only tangible logging

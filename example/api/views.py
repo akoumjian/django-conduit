@@ -2,7 +2,7 @@
 from conduit.api import ModelResource
 from conduit.api.fields import ForeignKeyField, ManyToManyField
 from example.models import Bar, Baz, Foo
-from example.geodb.models import GeoBar, GeoBaz, GeoFoo
+from geoexample.models import GeoBar, GeoBaz, GeoFoo
 
 class BarResource(ModelResource):
     class Meta(ModelResource.Meta):
