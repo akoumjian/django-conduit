@@ -5,6 +5,7 @@ from django import forms
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.geos import Point, LineString, Polygon, MultiPolygon
 from django.contrib.gis.geos import fromstr
+from django.contrib.gis.geos import GEOSException
 from conduit.api import ModelResource, Api
 from conduit.api.fields import ForeignKeyField, ManyToManyField
 from conduit.exceptions import HttpInterrupt
@@ -59,6 +60,7 @@ class GeoMethodTestCase(ConduitTestCase):
         self.poly = Polygon( ((-123.296814,47.066380), (-123.296814,48.370848), (-121.324768,48.370848), (-121.324768,47.066380), (-123.296814,47.066380)) )
         self.poly2 = Polygon( ((0, 0), (0, 1), (1, 1), (0, 0)) )
         self.multipoly = MultiPolygon( self.poly, self.poly2 )
+        self.invalid_point_wkt = 'POINT( -2000, -2000 )'
 
     def test_build_pub(self):
         detail_get = self.factory.get('/geofoo/1/')
@@ -486,6 +488,29 @@ class GeoMethodTestCase(ConduitTestCase):
 
         data = kwargs['bundles'][0]['response_data']
         self.assertEqual(data['resource_uri'], '/api/{0}/geobar/{1}/'.format(self.resource.Meta.api.name, geobar.pk))
+
+    def test_update_objs_from_data_invalid_geom(self):
+        geobar = GeoBar( name='valid geobar', geom=self.point )   
+        geobar.save()
+        put_detail = self.factory.put('/geobar/{0}/'.format(geobar.id), {}) 
+        kwargs = { 
+            'pub': ['put', 'detail'],
+            'bundles': [
+                {
+                    'obj': geobar,
+                    'request_data': {
+                        'name': 'invalid geobar',
+                        'geom': self.invalid_point_wkt,
+                        'resource_uri': '/api/v1/geobar/{0}'.format(geobar.id),
+                    }
+                }
+            ]
+        }
+        self.assertRaises(
+            GEOSException,
+            self.georesource.update_objs_from_data,
+            put_detail, **kwargs
+        )
 
 
 
