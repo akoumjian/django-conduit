@@ -30,6 +30,9 @@ DATABASES = {
         'NAME': 'geoexample',                      
         # 
         #  NOTE: USER and PASSWORD below are defaulted to what Travis CI expects.
+        #  You can skip setting up this database and running these tests by using the --testrunner flag:
+        #  `python example/manage.py test --testrunner='conduit.test.non_geo_testrunner.NonGeoTestRunner'`
+        #
         #  To run local tests you will need to:
         #
         #  0. create a spatially enabled database called 'geoexample'
