@@ -12,6 +12,7 @@ from dateutil import parser
 
 import logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 from conduit import Conduit
 from conduit.subscribe import subscribe, avoid, match
@@ -293,6 +294,8 @@ class ModelResource(Resource):
         """
         Builds a list of keywords relevant to this request
         """
+        logger.debug( "\n[ build_pub ]: kwargs = \n{0}".format( kwargs ) )
+
         pub = []
         pub.append(request.method.lower())
         if kwargs.get(self.Meta.pk_field, None):
@@ -303,6 +306,7 @@ class ModelResource(Resource):
         return (request, args, kwargs)
 
     def check_allowed_methods(self, request, *args, **kwargs):
+        logger.debug( "\n[ check_allowed_methods ]: kwargs = \n{0}".format( kwargs ) )
         allowed_methods = getattr(self.Meta, 'allowed_methods', ['get', 'put', 'post', 'delete'])
         for keyword in kwargs['pub']:
             if keyword in ['get', 'put', 'post', 'delete'] and keyword not in allowed_methods:
@@ -316,6 +320,8 @@ class ModelResource(Resource):
         """
         Retrieve instance of model referenced by url kwargs
         """
+        logger.debug( "\n[ get_obj_from_kwargs ]: kwargs = \n{0}".format( kwargs ) )
+
         cls = self.Meta.model
         try:
             kwds = {
@@ -331,6 +337,7 @@ class ModelResource(Resource):
 
     @subscribe(sub=['get'])
     def process_filters(self, request, *args, **kwargs):
+        logger.debug( "\n[ process_filters ]: kwargs = \n{0}".format( kwargs ) )
         # Collect and check filters coming in through request
         get_params = request.GET.copy()
 
@@ -381,6 +388,8 @@ class ModelResource(Resource):
         Makes per object authorization checks faster by
         limiting the instances it must iterate through
         """
+        logger.debug( "\n[ apply_filters ]: kwargs = \n{0}".format( kwargs ) )
+
         cls = self.Meta.model
         total_instances = cls.objects.all()
         # apply ordering
@@ -394,6 +403,7 @@ class ModelResource(Resource):
 
     @match(match=['get'])
     def bundles_from_objs(self, request, *args, **kwargs):
+        logger.debug( "\n[ bundles_from_objs ]: kwargs = \n{0}".format( kwargs ) )
         bundles = []
         for obj in kwargs['objs']:
             bundle = {}
@@ -404,6 +414,7 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def json_to_python(self, request, *args, **kwargs):
+        logger.debug( "\n[ json_to_python ]: kwargs = \n{0}".format( kwargs ) )
         if request.body:
             data = request.body
             kwargs['request_data'] = json.loads(data.decode('UTF-8'))
@@ -473,6 +484,8 @@ class ModelResource(Resource):
         For example, change datetime strings to datetimes
         Or decimal strings to decimals
         """
+        logger.debug( "\n[ hydrate_request_data ]: kwargs = \n{0}".format( kwargs ) )
+
         # Place single object dict in list
         # We treat all requests as if they had multiple objects
         data_dicts = kwargs.get('request_data', [])
@@ -496,6 +509,8 @@ class ModelResource(Resource):
         """
         Form pairings of request data and new or existing objects
         """
+        logger.debug( "\n[ bundles_from_request_data ]: kwargs = \n{0}".format( kwargs ) )
+
         bundles = []
         objs = []
         pk_field = getattr(self.Meta, 'pk_field', 'id')
@@ -551,17 +566,20 @@ class ModelResource(Resource):
 
     @match(match=['delete', 'list'])
     def auth_delete_list(self, request, *args, **kwargs):
+        logger.debug( "\n[ auth_delete_list ]: kwargs = \n{0}".format( kwargs ) )
         response = self.create_json_response(py_obj='', status=405)
         raise HttpInterrupt(response)
 
     @match(match=['post', 'detail'])
     def auth_post_detail(self, request, *args, **kwargs):
+        logger.debug( "\n[ auth_post_detail ]: kwargs = \n{0}".format( kwargs ) )
         response = self.create_json_response(py_obj='', status=405)
         raise HttpInterrupt(response)
 
 
     @subscribe(sub=['post', 'put'])
     def form_validate(self, request, *args, **kwargs):
+        logger.debug( "\n[ auth_form_validate ]: kwargs = \n{0}".format( kwargs ) )
         form_class = getattr(self.Meta, 'form_class', None)
         if form_class:
             fieldnames = self._get_model_fields()
@@ -591,6 +609,8 @@ class ModelResource(Resource):
         """
         Paginate results after authorization filters
         """
+        logger.debug( "\n[ limit_get_list ]: kwargs = \n{0}".format( kwargs ) )
+
         start = kwargs['offset']
         end = kwargs['offset'] + kwargs['limit']
         kwargs['bundles'] = kwargs['bundles'][start:end]
@@ -598,6 +618,7 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def save_fk_objs(self, request, *args, **kwargs):
+        logger.debug( "\n[ save_fk_objs ]: kwargs = \n{0}".format( kwargs ) )
         # ForeignKey objects must be created and attached to the parent obj
         # before saving the parent object, since the field may not be nullable
         for bundle in kwargs['bundles']:
@@ -638,6 +659,8 @@ class ModelResource(Resource):
         """
         Update the objects in place with processed request data
         """
+        logger.debug( "\n[ update_objs_from_data ]: kwargs = \n{0}".format( kwargs ) )
+
         for bundle in kwargs['bundles']:
             obj = bundle['obj']
             self._update_from_dict(obj, bundle['request_data'])
@@ -649,6 +672,7 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def save_m2m_objs(self, request, *args, **kwargs):
+        logger.debug( "\n[ save_m2m_objs ]: kwargs = \n{0}".format( kwargs ) )
         ## Must be done after persisting parent objects
         for bundle in kwargs['bundles']:
             obj = bundle['obj']
@@ -691,11 +715,13 @@ class ModelResource(Resource):
 
     @match(match=['get', 'detail'])
     def get_detail(self, request, *args, **kwargs):
+        logger.debug( "\n[ get_detail ]: kwargs = \n{0}".format( kwargs ) )
         kwargs['status'] = 200
         return (request, args, kwargs)
 
     @match(match=['get', 'list'])
     def get_list(self, request, *args, **kwargs):
+        logger.debug( "\n[ get_list ]: kwargs = \n{0}".format( kwargs ) )
         kwargs['meta'] = {
             'total': kwargs['total_count'],
             'limit': kwargs['limit'],
@@ -706,22 +732,26 @@ class ModelResource(Resource):
 
     @match(match=['put', 'detail'])
     def put_detail(self, request, *args, **kwargs):
+        logger.debug( "\n[ put_detail ]: kwargs = \n{0}".format( kwargs ) )
         kwargs['status'] = 201
         return (request, args, kwargs)
 
     @match(match=['put', 'list'])
     def put_list(self, request, *args, **kwargs):
+        logger.debug( "\n[ put_list ]: kwargs = \n{0}".format( kwargs ) )
         kwargs['status'] = 201
         kwargs['meta'] = {'limit': len(kwargs['bundles'])}
         return request, args, kwargs
 
     @match(match=['post', 'list'])
     def post_list(self, request, *args, **kwargs):
+        logger.debug( "\n[ post_list ]: kwargs = \n{0}".format( kwargs ) )
         kwargs['status'] = 201
         return (request, args, kwargs)
 
     @match(match=['detail', 'delete'])
     def delete_detail(self, request, *args, **kwargs):
+        logger.debug( "\n[ delete_detail ]: kwargs = \n{0}".format( kwargs ) )
         instance = kwargs['objs'][0]
         del kwargs['objs']
         instance.delete()
@@ -734,6 +764,8 @@ class ModelResource(Resource):
         """
         Prepare the response data dict for each object in bundles
         """
+        logger.debug( "\n[ response_data_from_bundles ]: kwargs = \n{0}".format( kwargs ) )
+
         bundles = kwargs['bundles']
         for bundle in bundles:
             obj = bundle['obj']
@@ -753,6 +785,8 @@ class ModelResource(Resource):
         """
         Iterates through field attributes and runs their dehydrate method
         """
+        logger.debug( "\n[ response_data_from_bundles ]: kwargs = \n{0}".format( kwargs ) )
+
         fields = self._get_explicit_fields()
         for bundle in kwargs['bundles']:
             for field in fields:
@@ -764,6 +798,8 @@ class ModelResource(Resource):
         """
         Add the resource uri to each bundles response data
         """
+        logger.debug( "\n[ add_resource_uri ]: kwargs = \n{0}".format( kwargs ) )
+
         for bundle in kwargs['bundles']:
             bundle['response_data']['resource_uri'] = self._get_resource_uri(obj=bundle['obj'])
         return request, args, kwargs
@@ -820,6 +856,7 @@ class ModelResource(Resource):
 
     @avoid(avoid=['delete'])
     def produce_response_data(self, request, *args, **kwargs):
+        logger.debug( "\n[ produce_response_data ]: kwargs = \n{0}".format( kwargs ) )
         data_dicts = []
         for bundle in kwargs['bundles']:
             data_dicts.append(bundle['response_data'])
@@ -839,6 +876,7 @@ class ModelResource(Resource):
         return (request, args, kwargs)
 
     def return_response(self, request, *args, **kwargs):
+        logger.debug( "\n[ return_response ]: kwargs = \n{0}".format( kwargs ) )
         response_data = kwargs.get('response_data', '')
         response = self.create_json_response(py_obj=response_data, status=kwargs['status'])
         return response
