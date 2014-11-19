@@ -12,7 +12,6 @@ from dateutil import parser
 
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 from conduit import Conduit
 from conduit.subscribe import subscribe, avoid, match
