@@ -1,4 +1,6 @@
 from importlib import import_module
+import logging
+logger = logging.getLogger( __name__ )
 from conduit.exceptions import HttpInterrupt
 from django.db import transaction
 
@@ -33,6 +35,7 @@ class Conduit(object):
             with transaction.commit_on_success():
                 for method_string in self.Meta.conduit[:-1]:
                     bound_method = self._get_method(method_string)
+                    logger.debug( "\n[ {0} ]: kwargs = \n{1}".format( bound_method.__name__, kwargs ) )
                     (request, args, kwargs,) = bound_method( request, *args, **kwargs)
         except HttpInterrupt as e:
             return e.response
