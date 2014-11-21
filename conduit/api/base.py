@@ -1,10 +1,13 @@
 import json
 import six
+
 from django.http import HttpResponse
 from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
 from django.conf.urls import url
+from django.contrib.contenttypes import generic
+
 from decimal import Decimal
 from dateutil import parser
 
@@ -202,6 +205,7 @@ class ModelResource(Resource):
             'form_validate',
             'limit_get_list',
             'save_fk_objs',
+            'save_gfk_objs',
             'update_objs_from_data',
             'save_m2m_objs',
             'get_detail',
@@ -614,6 +618,29 @@ class ModelResource(Resource):
                     id_fieldname = '{0}_id'.format(fieldname)
                     setattr(obj, id_fieldname, related_data)
 
+        return request, args, kwargs
+
+    @subscribe(sub=['post', 'put'])
+    def save_gfk_objs(self, request, *args, **kwargs):
+        for bundle in kwargs['bundles']:
+            obj = bundle['obj']
+            request_data = bundle['request_data']
+
+            # this returns nothing?
+            gfk_fieldnames = self._get_type_fieldnames(obj, generic.GenericForeignKey)
+            gfk_fieldnames.extend(self._get_explicit_field_by_type('gfk'))
+
+            for fieldname in gfk_fieldnames:
+                related_data = request_data[fieldname]
+                conduit_field = self._get_explicit_field_by_attribute(fieldname)
+
+                if conduit_field:
+                    try:
+                        conduit_field.save_related(request, self, obj, related_data)
+                    except HttpInterrupt as e:
+                        error_dict = {fieldname: json.loads(e.response.content)}
+                        response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                        raise HttpInterrupt(response)
         return request, args, kwargs
 
     @subscribe(sub=['post', 'put'])

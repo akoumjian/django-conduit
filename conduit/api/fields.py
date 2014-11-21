@@ -1,6 +1,7 @@
 import six
 from importlib import import_module
 from django.core.urlresolvers import resolve
+from django.db.models.loading import get_model
 
 class APIField(object):
     pass
@@ -47,6 +48,7 @@ class ForeignKeyField(APIField):
         'auth_delete_list',
         'form_validate',
         'save_fk_objs',
+        'save_gfk_objs',
         'update_objs_from_data',
         'save_m2m_objs',
     )
@@ -172,6 +174,7 @@ class ManyToManyField(APIField):
         'auth_delete_list',
         'form_validate',
         'save_fk_objs',
+        'save_gfk_objs',
         'update_objs_from_data',
         'save_m2m_objs',
     )
@@ -325,6 +328,7 @@ class GenericForeignKeyField(APIField):
         'auth_delete_list',
         'form_validate',
         'save_fk_objs',
+        'save_gfk_objs',
         'update_objs_from_data',
         'save_m2m_objs',
     )
@@ -333,6 +337,7 @@ class GenericForeignKeyField(APIField):
         self.related = 'gfk'
         self.attribute = attribute
         self.embed = embed
+        self.resource_cls = None
         self.resource_map = resource_map
 
     def fetch_resource(self, model):
@@ -343,7 +348,7 @@ class GenericForeignKeyField(APIField):
         """
         app_label = model._meta.app_label
         model_name = model.__name__
-        
+
         try:
             resource = self.resource_map['.'.join([app_label, model_name])]
         except KeyError:
@@ -351,12 +356,15 @@ class GenericForeignKeyField(APIField):
 
         if isinstance(resource, six.string_types):
             resource = import_class(resource)
+            self.resource_cls = resource
         return resource()
 
     def dehydrate(self, request, parent_inst, bundle=None):
-        obj = getattr(bundle['obj'], self.attribute)
-        model = type(obj)
+        obj = bundle['obj']
+        content_type = obj.content_type
+        model = get_model(content_type.app_label, content_type.name)
         resource = self.fetch_resource(model)
+        resource.Meta.api = parent_inst.Meta.api
 
         if self.embed:
             args = []
@@ -371,3 +379,23 @@ class GenericForeignKeyField(APIField):
             resource_uri = resource._get_resource_uri(obj=obj)
             bundle['response_data'][self.attribute] = resource_uri
         return bundle
+
+    def save_related(self, request, parent_inst, obj, rel_obj_data):
+        content_type = obj.content_type
+        model = get_model(content_type.app_label, content_type.name)
+
+        resource = self.fetch_resource(model)
+        resource.Meta.api = parent_inst.Meta.api
+
+        args, kwargs = self.do_this(rel_obj_data)
+
+        for methodname in self.save_conduit:
+            bound_method = resource._get_method(methodname)
+            (request, args, kwargs,) = bound_method(request, *args, **kwargs)
+
+        # Now we have to update the FK reference on the original object
+        # before saving
+        related_obj = kwargs['bundles'][0]['obj']
+        setattr(obj, self.attribute, related_obj)
+
+        return related_obj
