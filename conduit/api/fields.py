@@ -15,6 +15,18 @@ def import_class(resource_cls_str):
 
 
 class APIField(object):
+    def setup_resource(self):
+        """
+        Lazy load importing resource cls
+        """
+        # If we don't do this, imports will fail when trying
+        # to import resources in the same file as the related
+        # Field instantiation
+        # If we are passed the string rep of a resource
+        # class in python dot notation, import it
+        if isinstance(self.resource_cls, six.string_types):
+            self.resource_cls = import_class(self.resource_cls)
+
     def build_obj_and_kwargs(self, rel_obj_data):
         ## rel_obj_data is either int, uri string, or dict
         ## If int or uri, we are fetching object and attaching to FK
@@ -96,18 +108,6 @@ class ForeignKeyField(APIField):
         self.attribute = attribute
         self.embed = embed
         self.resource_cls = resource_cls
-
-    def setup_resource(self):
-        """
-        Lazy load importing resource cls
-        """
-        # If we don't do this, imports will fail when trying
-        # to import resources in the same file as the related
-        # Field instantiation
-        # If we are passed the string rep of a resource
-        # class in python dot notation, import it
-        if isinstance(self.resource_cls, six.string_types):
-            self.resource_cls = import_class(self.resource_cls)
 
     def dehydrate(self, request, parent_inst, bundle=None):
         """
@@ -199,18 +199,6 @@ class ManyToManyField(APIField):
         self.attribute = attribute
         self.embed = embed
         self.resource_cls = resource_cls
-
-    def setup_resource(self):
-        """
-        Lazy load importing resource cls
-        """
-        # If we don't do this, imports will fail when trying
-        # to import resources in the same file as the related
-        # Field instantiation
-        # If we are passed the string rep of a resource
-        # class in python dot notation, import it
-        if isinstance(self.resource_cls, six.string_types):
-            self.resource_cls = import_class(self.resource_cls)
 
     def dehydrate(self, request, parent_inst, bundle=None):
         """
