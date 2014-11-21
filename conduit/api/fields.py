@@ -3,9 +3,6 @@ from importlib import import_module
 from django.core.urlresolvers import resolve
 from django.db.models.loading import get_model
 
-class APIField(object):
-    pass
-
 
 def import_class(resource_cls_str):
     # import resource class dynamically
@@ -15,6 +12,10 @@ def import_class(resource_cls_str):
     module = import_module(module_str)
     resource_cls = getattr(module, cls_str)
     return resource_cls
+
+
+class APIField(object):
+    pass
 
 
 class ForeignKeyField(APIField):
