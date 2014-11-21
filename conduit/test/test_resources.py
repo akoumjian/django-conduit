@@ -11,100 +11,94 @@ from example.models import Bar, Baz, Foo, Item
 
 
 class ResourceTestCase(ConduitTestCase):
-    def test_basic_resource_post_list(self):
-        obj = {
-            'name': 'A new Bar'
-        }
-        data = json.dumps(obj)
-        post_list = self.factory.post('/bar/', data, content_type='application/json')
-        
-        bar_resource = BarResource()
-        bar_resource.Meta.api = Api(name='v1')
+    def test_gfk_post_list(self):
+        item_resource = ItemResource()
+        item_resource.Meta.api = Api(name='v1')
+        item_uri = item_resource._get_resource_uri()
 
-        response = bar_resource.view(post_list, [], {})
-        content = json.loads(response.content)
-
-        bar = Bar.objects.get(id=content['id'])
-
-        self.assertEqual(bar.name, obj['name'])
-        self.assertEqual(Bar.objects.count(), 1)
-
-    def test_resource_post_list(self):
-        obj = {
-            'bar': {
-                'name': 'New Bar',
-            },
-            'bazzes': [
-                {
-                    'name': 'New Baz'
-                },
-                {
-                    'name': 'Another Baz'
-                }
-            ],
-            'birthday': '2013-06-19',
-            'boolean': False,
-            'created': '2013-06-21T01:44:57.367956+00:00',
-            'decimal': '110.12',
-            'file_field': 'test/test.txt',
-            'float_field': 100000.123456789,
-            'id': 1,
-            'integer': 12,
-            'name': 'Foo Name',
-            'text': 'text goes here'
-        }
-        data = json.dumps(obj)
-        post_list = self.factory.post('/foo/', data, content_type='application/json')
-
-        foo_resource = FooResource()
-        foo_resource.Meta.api = Api(name='v1')
-
-        response = foo_resource.view(post_list, [], {})
-        content = json.loads(response.content)
-
-        self.assertEqual(Bar.objects.count(), 1)
-        self.assertEqual(Baz.objects.count(), 2)
-        self.assertEqual(Foo.objects.count(), 1)
-
-    def test_gfk_resource_post_list(self):
         content_type = ContentType.objects.get(name='bar')
 
         obj_data = {
-            'object_id': 1,
-            'content_type': '/api/v1/contenttype/8/'
+            'content_type': content_type.id,
+            'content_object': {
+                'name': 'Bar name'
+            }
         }
-        data = json.dumps(obj_data)
 
-        post_list = self.factory.post('/item/', data, content_type='application/json')
-
-        item_resource = ItemResource()
-        item_resource.Meta.api = Api(name='v1')
-
-        response = item_resource.view(post_list, [], {})
+        resposne = self.client.post(
+            item_uri,
+            data=json.dumps(obj_data),
+            content_type='application/json'
+        )
 
         self.assertEqual(Item.objects.count(), 1)
+        self.assertEqual(Item.objects.get(id=1).content_object.id, 1)
+        self.assertEqual(Bar.objects.count(), 1)
+        self.assertEqual(Bar.objects.all()[0].name, 'Bar name')
 
-    def test_gfk_resource_get_detail(self):
-        bar = Bar.objects.create(name='A bar')
+    def test_gfk_get_detail(self):
+        bar_resource = BarResource()
+        item_resource = ItemResource()
+
         content_type = ContentType.objects.get(name='bar')
+        bar = Bar.objects.create(name='A bar')
         item = Item.objects.create(
             object_id=bar.id,
             content_type=content_type
         )
 
-        item_resource = ItemResource()
+        bar_uri = bar_resource._get_resource_uri(obj=bar)
+        item_uri = item_resource._get_resource_uri(obj=item)
 
-        get_detail = self.factory.get('/item/1/', content_type='application/json')
-        response = item_resource.view(get_detail, [], {})
+        response = self.client.get(item_uri)
         content = json.loads(response.content)
 
-        meta = content['meta']
-        objects = content['objects']
+        self.assertEqual(Item.objects.count(), 1)
+        self.assertEqual(Bar.objects.count(), 1)
+        self.assertEqual(content['resource_uri'], item_uri)
+        self.assertEqual(content['object_id'], item.object_id)
+        self.assertEqual(content['id'], item.id)
+        self.assertEqual(content['content_object']['resource_uri'], bar_uri)
+
+    def test_gfk_update_detail(self):
+        bar = Bar.objects.create(name='Bar name')
+        content_type = ContentType.objects.get(name='bar')
+        item = Item.objects.create(
+            content_type=content_type,
+            object_id=bar.id
+        )
+
+        item_resource = ItemResource()
+        item_resource.Meta.api = Api(name='v1')
+        item_uri = item_resource._get_resource_uri(obj=item)
+
+        bar_resource = BarResource()
+        bar_uri = bar_resource._get_resource_uri(obj=bar)
+
+        data = {
+            'resource_uri': item_uri,
+            'id': item.id,
+            'content_type': item.content_type.id,
+            'content_object': {
+                'resource_uri': bar_uri,
+                'id': bar.id,
+                'name': 'New bar name'
+            }
+        }
+
+        response = self.client.put(item_uri, json.dumps(data))
 
         self.assertEqual(Item.objects.count(), 1)
-        self.assertEqual(meta['total'], 1)
-        self.assertEqual(objects[0]['id'], bar.id)
-        self.assertEqual(objects[0]['object_id'], bar.id)
-        self.assertEqual(objects[0]['content_type'], '/api/v1/contenttype/8/')
-        self.assertEqual(objects[0]['content_object'], '/api/v1/bar/{0}/'.format(bar.id))
-        self.assertEqual(objects[0]['resource_uri'], '/api/v1/item/1/')
+        self.assertEqual(Bar.objects.count(), 1)
+
+    def test_gfk_delete_detail(self):
+        bar = Bar.objects.create(name='Delete bar')
+        content_type = ContentType.objects.get(name='bar')
+        item = Item.objects.create(
+            object_id=bar.id,
+            content_type=content_type
+        )
+        response = self.client.delete('/api/v1/item/1/')
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(Item.objects.count(), 0)

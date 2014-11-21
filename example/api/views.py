@@ -39,11 +39,10 @@ class ItemResource(ModelResource):
         model = Item
 
     class Fields:
-        content_type = ForeignKeyField(
-            attribute='content_type',
-            resource_cls=ContentTypeResource)
         content_object = GenericForeignKeyField(
             attribute='content_object',
             resource_map={
                 'Bar': 'api.views.BarResource'
-            })
+            },
+            embed=True
+        )
