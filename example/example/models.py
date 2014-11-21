@@ -2,7 +2,6 @@ from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
-
 class Bar(models.Model):
     name = models.CharField(max_length=250)
 

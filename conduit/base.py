@@ -23,7 +23,7 @@ class Conduit(object):
 
     def view(self, request, *args, **kwargs):
         """
-        Process the request, return a response
+        Process the request as a Django view, return a response
         """
         # self = cls()
         try:
@@ -39,3 +39,13 @@ class Conduit(object):
 
         bound_response_method = self._get_method(self.Meta.conduit[-1])
         return bound_response_method(request, *args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        """
+        Process conduit as a generic pipeline
+        """
+        for method_string in self.Meta.conduit:
+            bound_method = self._get_method(method_string)
+            (args, kwargs,) = bound_method(*args, **kwargs)
+        return args, kwargs
+

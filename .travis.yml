@@ -1,5 +1,6 @@
 language: python
 
+
 python:
     - "2.6"
     - "2.7"
@@ -15,6 +16,9 @@ install:
     - pip install -q Django==$DJANGO --use-mirrors
     - pip install -q . --use-mirrors
     - pip install -q -r requirements.txt --use-mirrors
+
+before_script:
+    - bash ./travis_postgis_setup.sh
 
 script: python example/manage.py test conduit
 

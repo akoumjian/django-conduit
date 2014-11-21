@@ -5,6 +5,8 @@ from django.http import HttpResponse
 from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
+from django.contrib.gis.db import models as geomodels
+from django.contrib.gis.geos import fromstr
 from django.conf.urls import url
 from django.contrib.contenttypes import generic
 
@@ -229,6 +231,9 @@ class ModelResource(Resource):
         return instance
 
     def _get_explicit_fields(self):
+        """
+        Return fields that are specified on resource vs those that are implicit
+        """
         fields = []
         field_meta = getattr(self, 'Fields', None)
         if field_meta:
@@ -238,6 +243,9 @@ class ModelResource(Resource):
         return fields
 
     def _get_explicit_field_by_attribute(self, attribute=None):
+        """
+        Grab the field objects on resource by its attribute name
+        """
         explicit_fields = self._get_explicit_fields()
         for field in explicit_fields:
             if field.attribute == attribute:
@@ -245,6 +253,11 @@ class ModelResource(Resource):
         return None
 
     def _get_explicit_field_by_type(self, related=None):
+        """
+        Filter specified fields on resource based on 'related' attribute
+
+        related values may be 'fk', 'm2m', 'gfk'
+        """
         fields = self._get_explicit_fields()
         field_attributes = []
         for field in fields:
@@ -254,10 +267,11 @@ class ModelResource(Resource):
 
     def _get_model_fields(self, obj=None):
         """
-        Get all Django model fields on an obj
+        Get _all_ of the fields on a Django model
         """
         if not obj:
             obj = self.Meta.model
+        ## Django returns non-fields, like "id", so we filter them out
         field_names = obj._meta.get_all_field_names()
         real_fields = []
         for field_name in field_names:
@@ -267,7 +281,7 @@ class ModelResource(Resource):
 
     def _get_type_fieldnames(self, obj=None, field_type=None):
         """
-        Return all the fieldnames of a specific type
+        Returns the fieldnames on model of Django field type
         """
         if not obj:
             obj = self.Meta.model
@@ -442,6 +456,9 @@ class ModelResource(Resource):
 
         if isinstance(field, models.DecimalField):
             return Decimal(data)
+
+        if isinstance(field, geomodels.GeometryField):
+            return fromstr(data)
 
         if isinstance(field, models.ForeignKey):
             return data
@@ -813,6 +830,9 @@ class ModelResource(Resource):
             return field.value_to_string(obj)
 
         if isinstance(field, models.DecimalField):
+            return field.value_to_string(obj)
+
+        if isinstance(field, geomodels.GeometryField):
             return field.value_to_string(obj)
 
         if isinstance(field, models.ForeignKey):
