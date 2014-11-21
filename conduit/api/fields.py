@@ -15,7 +15,44 @@ def import_class(resource_cls_str):
 
 
 class APIField(object):
-    pass
+    def build_obj_and_kwargs(self, rel_obj_data):
+        ## rel_obj_data is either int, uri string, or dict
+        ## If int or uri, we are fetching object and attaching to FK
+        ## If dict, we could be creating an FK or updating one in place
+        pk_field = [self.resource_cls.Meta.pk_field]
+        if isinstance(rel_obj_data, int):
+            args = []
+            kwargs = {}
+            kwargs['pub'] = ['get', 'detail']
+            pk = rel_obj_data
+            related_obj = self.resource_cls.Meta.model.objects.get(
+                **{pk_field: pk}
+            )
+            kwargs['bundles'] = [{'obj': related_obj}]
+        elif isinstance(rel_obj_data, six.string_types):
+            func, args, kwargs = resolve(rel_obj_data)
+            kwargs['pub'] = ['get', 'detail']
+            pk_field = self.resource_cls.Meta.pk_field
+            related_obj = self.resource_cls.Meta.model.objects.get(
+                **{pk_field: kwargs[pk_field]}
+            )
+            kwargs['bundles'] = [{'obj': related_obj}]
+        else:
+            args = []
+            kwargs = {
+                'request_data': rel_obj_data,
+            }
+            # Add field to kwargs as if we had hit detail url
+            pk_field = self.resource_cls.Meta.pk_field
+            if pk_field in rel_obj_data:
+                # Updated an existing object
+                kwargs[pk_field] = rel_obj_data[pk_field]
+                kwargs['pub'] = ['put', 'detail']
+            else:
+                # Creating a new object
+                kwargs['pub'] = ['post', 'list']
+
+        return args, kwargs
 
 
 class ForeignKeyField(APIField):
@@ -104,41 +141,7 @@ class ForeignKeyField(APIField):
         """
         self.setup_resource()
 
-        ## rel_obj_data is either int, uri string, or dict
-        ## If int or uri, we are fetching object and attaching to FK
-        ## If dict, we could be creating an FK or updating one in place
-        pk_field = [self.resource_cls.Meta.pk_field]
-        if isinstance(rel_obj_data, int):
-            args = []
-            kwargs = {}
-            kwargs['pub'] = ['get', 'detail']
-            pk = rel_obj_data
-            related_obj = self.resource_cls.Meta.model.objects.get(
-                **{pk_field: pk}
-            )
-            kwargs['bundles'] = [{'obj': related_obj}]
-        elif isinstance(rel_obj_data, six.string_types):
-            func, args, kwargs = resolve(rel_obj_data)
-            kwargs['pub'] = ['get', 'detail']
-            pk_field = self.resource_cls.Meta.pk_field
-            related_obj = self.resource_cls.Meta.model.objects.get(
-                **{pk_field: kwargs[pk_field]}
-            )
-            kwargs['bundles'] = [{'obj': related_obj}]
-        else:
-            args = []
-            kwargs = {
-                'request_data': rel_obj_data,
-            }
-            # Add field to kwargs as if we had hit detail url
-            pk_field = self.resource_cls.Meta.pk_field
-            if pk_field in rel_obj_data:
-                # Updated an existing object
-                kwargs[pk_field] = rel_obj_data[pk_field]
-                kwargs['pub'] = ['put', 'detail']
-            else:
-                # Creating a new object
-                kwargs['pub'] = ['post', 'list']
+        args, kwargs = self.build_obj_and_kwargs(rel_obj_data)
 
         resource = self.resource_cls()
         resource.Meta.api = parent_inst.Meta.api
@@ -397,9 +400,10 @@ class GenericForeignKeyField(APIField):
         model = get_model(content_type.app_label, content_type.name)
 
         resource = self.fetch_resource(model)
+        self.resource_cls = resource
         resource.Meta.api = parent_inst.Meta.api
 
-        args, kwargs = self.do_this(rel_obj_data)
+        args, kwargs = self.build_obj_and_kwargs(rel_obj_data)
 
         for methodname in self.save_conduit:
             bound_method = resource._get_method(methodname)
