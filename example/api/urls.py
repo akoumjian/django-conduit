@@ -1,7 +1,7 @@
 ## api/urls.py
 from django.conf.urls import patterns, include, url
 from conduit.api import Api
-from api.views import BarResource, BazResource, ContentTypeResource(), FooResource, ItemResource, GeoBarResource, GeoBazResource, GeoFooResource
+from api.views import BarResource, BazResource, ContentTypeResource, FooResource, ItemResource, GeoBarResource, GeoBazResource, GeoFooResource
 
 
 api = Api()
