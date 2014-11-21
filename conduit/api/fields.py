@@ -104,7 +104,7 @@ class ForeignKeyField(APIField):
         ## rel_obj_data is either int, uri string, or dict
         ## If int or uri, we are fetching object and attaching to FK
         ## If dict, we could be creating an FK or updating one in place
-        pk_field = [self.resource_cls.Meta.pk_field]
+        pk_field = self.resource_cls.Meta.pk_field
         if isinstance(rel_obj_data, int):
             args = []
             kwargs = {}

@@ -290,6 +290,8 @@ class ModelResource(Resource):
     def build_pub(self, request, *args, **kwargs):
         """
         Builds a list of keywords relevant to this request
+
+        Used with pub/sub decorators in conduit.subscribe
         """
         pub = []
         pub.append(request.method.lower())
@@ -329,6 +331,12 @@ class ModelResource(Resource):
 
     @subscribe(sub=['get'])
     def process_filters(self, request, *args, **kwargs):
+        """
+        Grab filters from request params and create final list of ORM filters
+
+        Request filters will be checked against allowed_filters and
+        added to default_filters to create final list.
+        """
         # Collect and check filters coming in through request
         get_params = request.GET.copy()
 
@@ -374,7 +382,7 @@ class ModelResource(Resource):
     @match(match=['get', 'list'])
     def apply_filters(self, request, *args, **kwargs):
         """
-        run against filters before authorization checks
+        Filter fetched objects before running row level authorizations
 
         Makes per object authorization checks faster by
         limiting the instances it must iterate through
@@ -392,6 +400,9 @@ class ModelResource(Resource):
 
     @match(match=['get'])
     def bundles_from_objs(self, request, *args, **kwargs):
+        """
+        Creates a bundle for each object fetched during GET
+        """
         bundles = []
         for obj in kwargs['objs']:
             bundle = {}
@@ -402,6 +413,9 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def json_to_python(self, request, *args, **kwargs):
+        """
+        Creates a Python object from request JSON
+        """
         if request.body:
             data = request.body
             kwargs['request_data'] = json.loads(data.decode('UTF-8'))
@@ -490,6 +504,7 @@ class ModelResource(Resource):
     def bundles_from_request_data(self, request, *args, **kwargs):
         """
         Form pairings of request data and new or existing objects
+        Stores in bundles and objs lists.
         """
         bundles = []
         objs = []
@@ -557,6 +572,13 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def form_validate(self, request, *args, **kwargs):
+        """
+        Validates request data with a provided Django form
+
+        If the model object exists, it will pass it in to the form instance.
+        If the form produces errors, a response is returned with a JSON 
+        representation of the errors.
+        """
         form_class = getattr(self.Meta, 'form_class', None)
         if form_class:
             fieldnames = self._get_model_fields()
@@ -593,8 +615,14 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def save_fk_objs(self, request, *args, **kwargs):
-        # ForeignKey objects must be created and attached to the parent obj
-        # before saving the parent object, since the field may not be nullable
+        """
+        Updates and saves ForeignKey objects from hydrated request data.
+
+        If embed=True, the FK object will be updated or created here.
+
+        ForeignKey objects must be created and attached to the parent obj
+        before saving the parent object, since the field may not be nullable
+        """
         for bundle in kwargs['bundles']:
             obj = bundle['obj']
             request_data = bundle['request_data']
@@ -631,7 +659,10 @@ class ModelResource(Resource):
     @subscribe(sub=['post', 'put'])
     def update_objs_from_data(self, request, *args, **kwargs):
         """
-        Update the objects in place with processed request data
+        Update objs in place from hydrated / sanitized request data and save.
+
+        Obj could be existing model or empty/fresh class instance for new
+        models.
         """
         for bundle in kwargs['bundles']:
             obj = bundle['obj']
@@ -644,6 +675,11 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def save_m2m_objs(self, request, *args, **kwargs):
+        """
+        Adds or removes m2m objects to/from parent object. 
+
+        If m2m field is embed=True, will update m2m attributes or create new m2m objects
+        """
         ## Must be done after persisting parent objects
         for bundle in kwargs['bundles']:
             obj = bundle['obj']
