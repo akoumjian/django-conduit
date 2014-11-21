@@ -51,7 +51,7 @@ class ResourceTestCase(ConduitTestCase):
         item_uri = item_resource._get_resource_uri(obj=item)
 
         response = self.client.get(item_uri)
-        content = json.loads(response.content)
+        content = json.loads(response.content.decode())
 
         self.assertEqual(Item.objects.count(), 1)
         self.assertEqual(Bar.objects.count(), 1)
