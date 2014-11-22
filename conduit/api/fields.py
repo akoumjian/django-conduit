@@ -343,11 +343,20 @@ class GenericForeignKeyField(APIField):
         self.resource_cls = None
         self.resource_map = resource_map
 
+    def setup_resource(self, obj=None):
+        content_type = obj.content_type
+        model = get_model(content_type.app_label, content_type.name)
+
+        self.fetch_resource(model)
+
+        if isinstance(self.resource_cls, six.string_types):
+            self.resource_cls = import_class(self.resource_cls)
+
     def fetch_resource(self, model):
         """
-        Returns an instance of a Resource from a GenericForeignKeyField
-        resource_map attribute. First looks for `app_name.Model_name`, falling
-        back to `Model_name`.
+        Retrieves the Resource class of a GenericForeignKeyField resource_map
+        attribute based on a model. First looks for `app_name.Model_name`,
+        falling back to `Model_name`.
         """
         app_label = model._meta.app_label
         model_name = model.__name__
@@ -356,17 +365,13 @@ class GenericForeignKeyField(APIField):
             resource = self.resource_map['.'.join([app_label, model_name])]
         except KeyError:
             resource = self.resource_map[model_name]
-
-        if isinstance(resource, six.string_types):
-            resource = import_class(resource)
-            self.resource_cls = resource
-        return resource()
+        self.resource_cls = resource
 
     def dehydrate(self, request, parent_inst, bundle=None):
         obj = bundle['obj']
-        content_type = obj.content_type
-        model = get_model(content_type.app_label, content_type.name)
-        resource = self.fetch_resource(model)
+        self.setup_resource(obj=obj)
+
+        resource = self.resource_cls()
         resource.Meta.api = parent_inst.Meta.api
 
         if self.embed:
@@ -384,11 +389,9 @@ class GenericForeignKeyField(APIField):
         return bundle
 
     def save_related(self, request, parent_inst, obj, rel_obj_data):
-        content_type = obj.content_type
-        model = get_model(content_type.app_label, content_type.name)
+        self.setup_resource(obj=obj)
 
-        resource = self.fetch_resource(model)
-        self.resource_cls = resource
+        resource = self.resource_cls()
         resource.Meta.api = parent_inst.Meta.api
 
         args, kwargs = self.build_obj_and_kwargs(rel_obj_data)
