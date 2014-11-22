@@ -11,15 +11,20 @@ from example.models import Bar, Baz, Foo, Item
 
 
 class ResourceTestCase(ConduitTestCase):
+    def setUp(self):
+        self.item_resource = ItemResource()
+        self.item_resource.Meta.api = Api(name='v1')
+
+        self.bar_resource = BarResource()
+        self.bar_resource.Meta.api = Api(name='v1')
+
+        self.bar_ctype = ContentType.objects.get(name='bar')
+
     def test_gfk_post_list(self):
-        item_resource = ItemResource()
-        item_resource.Meta.api = Api(name='v1')
-        item_uri = item_resource._get_resource_uri()
+        item_uri = self.item_resource._get_resource_uri()
 
-        content_type = ContentType.objects.get(name='bar')
-
-        obj_data = {
-            'content_type': content_type.id,
+        data = {
+            'content_type': self.bar_ctype.id,
             'content_object': {
                 'name': 'Bar name'
             }
@@ -27,7 +32,7 @@ class ResourceTestCase(ConduitTestCase):
 
         resposne = self.client.post(
             item_uri,
-            data=json.dumps(obj_data),
+            json.dumps(data),
             content_type='application/json'
         )
 
@@ -37,18 +42,14 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(Bar.objects.all()[0].name, 'Bar name')
 
     def test_gfk_get_detail(self):
-        bar_resource = BarResource()
-        item_resource = ItemResource()
-
-        content_type = ContentType.objects.get(name='bar')
         bar = Bar.objects.create(name='A bar')
         item = Item.objects.create(
             object_id=bar.id,
-            content_type=content_type
+            content_type=self.bar_ctype
         )
 
-        bar_uri = bar_resource._get_resource_uri(obj=bar)
-        item_uri = item_resource._get_resource_uri(obj=item)
+        bar_uri = self.bar_resource._get_resource_uri(obj=bar)
+        item_uri = self.item_resource._get_resource_uri(obj=item)
 
         response = self.client.get(item_uri)
         content = json.loads(response.content.decode())
@@ -64,46 +65,40 @@ class ResourceTestCase(ConduitTestCase):
         bar_1 = Bar.objects.create(name="Bar one")
         bar_2 = Bar.objects.create(name="Bar two")
 
-        content_type = ContentType.objects.get(name='bar')
-
         item_1 = Item.objects.create(
-            content_type=content_type,
+            content_type=self.bar_ctype,
             object_id=bar_1.id
         )
 
         item_2 = Item.objects.create(
-            content_type=content_type,
+            content_type=self.bar_ctype,
             object_id=bar_2.id
         )
 
-        bar_resource = BarResource()
-
-        item_resource = ItemResource()
-        item_uri = item_resource._get_resource_uri()
-
         data = [
             {
-                'resource_uri': item_resource._get_resource_uri(obj=item_1),
+                'resource_uri': self.item_resource._get_resource_uri(obj=item_1),
                 'id': item_1.id,
                 'content_type': item_1.content_type.id,
                 'content_object': {
-                    'resource_uri': bar_resource._get_resource_uri(obj=bar_1),
+                    'resource_uri': self.bar_resource._get_resource_uri(obj=bar_1),
                     'id': bar_1.id,
                     'name': 'Altered bar 1'
                 }
             },
             {
-                'resource_uri': item_resource._get_resource_uri(obj=item_2),
+                'resource_uri': self.item_resource._get_resource_uri(obj=item_2),
                 'id': item_2.id,
                 'content_type': item_2.content_type.id,
                 'content_object': {
-                    'resource_uri': bar_resource._get_resource_uri(obj=bar_2),
+                    'resource_uri': self.bar_resource._get_resource_uri(obj=bar_2),
                     'id': bar_2.id,
                     'name': 'Altered bar 2'
                 }
             }
         ]
 
+        item_uri = self.item_resource._get_resource_uri()
         response = self.client.put(item_uri, json.dumps(data))
         content = response.content.decode()
 
@@ -117,18 +112,13 @@ class ResourceTestCase(ConduitTestCase):
 
     def test_gfk_update_detail(self):
         bar = Bar.objects.create(name='Bar name')
-        content_type = ContentType.objects.get(name='bar')
         item = Item.objects.create(
-            content_type=content_type,
+            content_type=self.bar_ctype,
             object_id=bar.id
         )
 
-        item_resource = ItemResource()
-        item_resource.Meta.api = Api(name='v1')
-        item_uri = item_resource._get_resource_uri(obj=item)
-
-        bar_resource = BarResource()
-        bar_uri = bar_resource._get_resource_uri(obj=bar)
+        item_uri = self.item_resource._get_resource_uri(obj=item)
+        bar_uri = self.bar_resource._get_resource_uri(obj=bar)
 
         data = {
             'resource_uri': item_uri,
@@ -148,12 +138,13 @@ class ResourceTestCase(ConduitTestCase):
 
     def test_gfk_delete_detail(self):
         bar = Bar.objects.create(name='Delete bar')
-        content_type = ContentType.objects.get(name='bar')
         item = Item.objects.create(
             object_id=bar.id,
-            content_type=content_type
+            content_type=self.bar_ctype
         )
-        response = self.client.delete('/api/v1/item/1/')
+
+        delete_endpoint = self.item_resource._get_resource_uri(obj=item)
+        response = self.client.delete(delete_endpoint)
 
         self.assertEqual(response.status_code, 204)
         self.assertEqual(Item.objects.count(), 0)
