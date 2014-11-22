@@ -49,7 +49,8 @@ class ItemResource(ModelResource):
         content_object = GenericForeignKeyField(
             attribute='content_object',
             resource_map={
-                'Bar': 'api.views.BarResource'
+                'Bar': 'api.views.BarResource',
+                'Foo': 'api.views.FooResource',
             },
             embed=True
         )

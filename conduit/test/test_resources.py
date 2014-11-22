@@ -1,5 +1,7 @@
 import json
 
+from datetime import datetime
+
 from django.contrib.contenttypes.models import ContentType
 
 from conduit.api import Api
@@ -17,6 +19,9 @@ class ResourceTestCase(ConduitTestCase):
 
         self.bar_resource = BarResource()
         self.bar_resource.Meta.api = Api(name='v1')
+
+        self.foo_resource = FooResource()
+        self.foo_resource.Meta.api = Api(name='v1')
 
         self.bar_ctype = ContentType.objects.get(name='bar')
 
@@ -147,6 +152,8 @@ class ResourceTestCase(ConduitTestCase):
 
         response = self.client.put(item_uri, json.dumps(data))
 
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Bar.objects.get(id=bar.id).name, 'New bar name')
         self.assertEqual(Item.objects.count(), 1)
         self.assertEqual(Bar.objects.count(), 1)
 
@@ -162,3 +169,76 @@ class ResourceTestCase(ConduitTestCase):
 
         self.assertEqual(response.status_code, 204)
         self.assertEqual(Item.objects.count(), 0)
+
+    def test_gfk_foo_resource(self):
+        data = {
+            'bar': {
+                'name': 'New Bar',
+            },
+            'bazzes': [
+                {
+                    'name': 'New Baz'
+                },
+                {
+                    'name': 'Another Baz'
+                }
+            ],
+            'birthday': '2013-06-19',
+            'boolean': False,
+            'created': '2013-06-21T01:44:57.367956+00:00',
+            'decimal': '110.12',
+            'file_field': 'test/test.txt',
+            'float_field': 100000.123456789,
+            'id': 1,
+            'integer': 12,
+            'name': 'Foo Name',
+            'text': 'text goes here'
+        }
+
+        foo_list_uri = self.foo_resource._get_resource_uri()
+        response = self.client.post(
+            foo_list_uri,
+            json.dumps(data),
+            content_type='application/json'
+        )
+        content = json.loads(response.content.decode())
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Foo.objects.count(), 1)
+
+        foo_get_uri = self.foo_resource._get_resource_uri(obj=Foo.objects.get(id=content['id']))
+        response = self.client.get(foo_get_uri)
+        content = json.loads(response.content.decode())
+
+        self.assertEqual(
+            Bar.objects.get(id=content['bar']['id']).name,
+            'New Bar'
+        )
+
+        self.assertEqual(
+            Baz.objects.get(id=content['bazzes'][0]['id']).name,
+            'New Baz'
+        )
+
+        self.assertEqual(
+            Baz.objects.get(id=content['bazzes'][1]['id']).name,
+            'Another Baz'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(content['birthday'], datetime.now().strftime('%Y-%m-%d')) # '2013-06-19'
+        self.assertEqual(content['boolean'], False)
+
+        frmt = '%Y-%m-%dT%H:%M:%S.%f'
+        # `content['created'][:-6]` rips out the timezone information for parsing
+        self.assertEqual(
+            datetime.strftime(datetime.strptime(content['created'][:-6], frmt), frmt),
+            datetime.strftime(Foo.objects.all()[0].created, frmt)
+        )
+        self.assertEqual(content['decimal'], '110.12')
+        self.assertEqual(content['file_field'], 'test/test.txt')
+        self.assertEqual(content['float_field'], 100000.123456789)
+        self.assertEqual(content['id'], 1)
+        self.assertEqual(content['integer'], 12)
+        self.assertEqual(content['name'], 'Foo Name')
+        self.assertEqual(content['text'], 'text goes here')
