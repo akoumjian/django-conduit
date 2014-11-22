@@ -60,6 +60,61 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(content['id'], item.id)
         self.assertEqual(content['content_object']['resource_uri'], bar_uri)
 
+    def test_gfk_update_list(self):
+        bar_1 = Bar.objects.create(name="Bar one")
+        bar_2 = Bar.objects.create(name="Bar two")
+
+        content_type = ContentType.objects.get(name='bar')
+
+        item_1 = Item.objects.create(
+            content_type=content_type,
+            object_id=bar_1.id
+        )
+
+        item_2 = Item.objects.create(
+            content_type=content_type,
+            object_id=bar_2.id
+        )
+
+        bar_resource = BarResource()
+
+        item_resource = ItemResource()
+        item_uri = item_resource._get_resource_uri()
+
+        data = [
+            {
+                'resource_uri': item_resource._get_resource_uri(obj=item_1),
+                'id': item_1.id,
+                'content_type': item_1.content_type.id,
+                'content_object': {
+                    'resource_uri': bar_resource._get_resource_uri(obj=bar_1),
+                    'id': bar_1.id,
+                    'name': 'Altered bar 1'
+                }
+            },
+            {
+                'resource_uri': item_resource._get_resource_uri(obj=item_2),
+                'id': item_2.id,
+                'content_type': item_2.content_type.id,
+                'content_object': {
+                    'resource_uri': bar_resource._get_resource_uri(obj=bar_2),
+                    'id': bar_2.id,
+                    'name': 'Altered bar 2'
+                }
+            }
+        ]
+
+        response = self.client.put(item_uri, json.dumps(data))
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 201)
+
+        self.assertEqual(Bar.objects.count(), 2)
+        self.assertEqual(Item.objects.count(), 2)
+
+        self.assertEqual(Bar.objects.get(id=bar_1.id).name, 'Altered bar 1')
+        self.assertEqual(Bar.objects.get(id=bar_2.id).name, 'Altered bar 2')
+
     def test_gfk_update_detail(self):
         bar = Bar.objects.create(name='Bar name')
         content_type = ContentType.objects.get(name='bar')
