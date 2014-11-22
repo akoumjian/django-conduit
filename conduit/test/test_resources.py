@@ -21,25 +21,39 @@ class ResourceTestCase(ConduitTestCase):
         self.bar_ctype = ContentType.objects.get(name='bar')
 
     def test_gfk_post_list(self):
-        item_uri = self.item_resource._get_resource_uri()
-
-        data = {
-            'content_type': self.bar_ctype.id,
-            'content_object': {
-                'name': 'Bar name'
+        data = [
+            {
+                'content_type': self.bar_ctype.id,
+                'content_object': {
+                    'name': 'Bar name one'
+                }
+            },
+            {
+                'content_type': self.bar_ctype.id,
+                'content_object': {
+                    'name': 'Bar name two'
+                }
             }
-        }
+        ]
 
-        resposne = self.client.post(
+        item_uri = self.item_resource._get_resource_uri()
+        response = self.client.post(
             item_uri,
             json.dumps(data),
             content_type='application/json'
         )
+        content = json.loads(response.content.decode())
 
-        self.assertEqual(Item.objects.count(), 1)
-        self.assertEqual(Item.objects.get(id=1).content_object.id, 1)
-        self.assertEqual(Bar.objects.count(), 1)
-        self.assertEqual(Bar.objects.all()[0].name, 'Bar name')
+        self.assertEqual(response.status_code, 201)
+
+        self.assertEqual(Item.objects.count(), 2)
+        self.assertEqual(Bar.objects.count(), 2)
+
+        item_1 = Item.objects.get(id=content[0]['object_id'])
+        item_2 = Item.objects.get(id=content[1]['object_id'])
+
+        self.assertEqual(item_1.content_object.name, 'Bar name one')
+        self.assertEqual(item_2.content_object.name, 'Bar name two')
 
     def test_gfk_get_detail(self):
         bar = Bar.objects.create(name='A bar')
