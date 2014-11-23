@@ -868,9 +868,6 @@ class ModelResource(Resource):
         if isinstance(field, models.ManyToManyField):
             return eval(field.value_to_string(obj))
 
-        if isinstance(field, generic.GenericForeignKey):
-            import ipdb; ipdb.set_trace()
-
         logger.info('Could not find field type match for {0}'.format(field))
         return None
 
