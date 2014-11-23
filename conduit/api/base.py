@@ -666,9 +666,7 @@ class ModelResource(Resource):
             obj = bundle['obj']
             request_data = bundle['request_data']
 
-            # this returns nothing?
-            gfk_fieldnames = self._get_type_fieldnames(obj, generic.GenericForeignKey)
-            gfk_fieldnames.extend(self._get_explicit_field_by_type('gfk'))
+            gfk_fieldnames = self._get_explicit_field_by_type('gfk')
 
             for fieldname in gfk_fieldnames:
                 related_data = request_data[fieldname]
@@ -798,7 +796,7 @@ class ModelResource(Resource):
             obj_data = {}
             for fieldname in self._get_model_fields(obj):
                 field = obj._meta.get_field_by_name(fieldname)[0]
-                
+
                 dehydrated_value = self._to_basic_type(obj, field)
                 obj_data[fieldname] = dehydrated_value
 
@@ -869,6 +867,9 @@ class ModelResource(Resource):
         ## FIXME: this is dangerous and stupid
         if isinstance(field, models.ManyToManyField):
             return eval(field.value_to_string(obj))
+
+        if isinstance(field, generic.GenericForeignKey):
+            import ipdb; ipdb.set_trace()
 
         logger.info('Could not find field type match for {0}'.format(field))
         return None
