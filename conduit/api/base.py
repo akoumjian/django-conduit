@@ -20,17 +20,17 @@ from conduit.exceptions import HttpInterrupt
 
 
 class Api(object):
-    _resources = []
-    # Reference attached resources by model type
-    _by_model = {}
-    # List model names by app models module
-    _app_models = {}
 
     def __init__(self, name='v1'):
         self.name = name
+        self._resources = []
+        # Reference attached resources by model type
+        self._by_model = {}
+        # List model names by app models module
+        self._app_models = {}
 
     def register(self, resource_instance):
-        # Add to list of resources
+        # Add to list of resources 
         self._resources.append(resource_instance)
         # Add to dict of resources by model name
         model = getattr(resource_instance.Meta, 'model', None)
@@ -252,8 +252,9 @@ class ModelResource(Resource):
 
     def _get_explicit_field_by_type(self, related=None):
         """
-        Filter specified fields on resource based on 'related' attribute
+        Returns fields that are explicitly coded onto the resource
 
+        Filter specified fields on resource based on 'related' attribute
         related values may be 'fk', 'm2m', 'gfk'
         """
         fields = self._get_explicit_fields()
@@ -637,6 +638,7 @@ class ModelResource(Resource):
             fk_fieldnames.extend(self._get_explicit_field_by_type('fk'))
             # Make sure names are unique
             fk_fieldnames = set(fk_fieldnames)
+
             for fieldname in fk_fieldnames:
                 # Get the data to process
                 related_data = request_data[fieldname]
@@ -666,6 +668,7 @@ class ModelResource(Resource):
             obj = bundle['obj']
             request_data = bundle['request_data']
 
+            # GFKs must be explicitly stated on Resource
             gfk_fieldnames = self._get_explicit_field_by_type('gfk')
 
             for fieldname in gfk_fieldnames:

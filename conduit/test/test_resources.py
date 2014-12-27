@@ -15,13 +15,15 @@ from example.models import Bar, Baz, Foo, Item
 class ResourceTestCase(ConduitTestCase):
     def setUp(self):
         self.item_resource = ItemResource()
-        self.item_resource.Meta.api = Api(name='v1')
 
         self.bar_resource = BarResource()
-        self.bar_resource.Meta.api = Api(name='v1')
 
         self.foo_resource = FooResource()
-        self.foo_resource.Meta.api = Api(name='v1')
+
+        api = Api(name='v1')
+        api.register(self.item_resource)
+        api.register(self.bar_resource)
+        api.register(self.foo_resource)
 
         self.bar_ctype = ContentType.objects.get(name='bar')
 
@@ -61,6 +63,28 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(item_2.content_object.name, 'Bar name two')
 
     def test_gfk_get_detail(self):
+        bar = Bar.objects.create(name='A bar')
+        item = Item.objects.create(
+            object_id=bar.id,
+            content_type=self.bar_ctype
+        )
+
+        bar_uri = self.bar_resource._get_resource_uri(obj=bar)
+        no_map_item_resource = ItemResource()
+        no_map_item_resource.resource_map = {}
+        item_uri = no_map_item_resource._get_resource_uri(obj=item)
+
+        response = self.client.get(item_uri)
+        content = json.loads(response.content.decode())
+
+        self.assertEqual(Item.objects.count(), 1)
+        self.assertEqual(Bar.objects.count(), 1)
+        self.assertEqual(content['resource_uri'], item_uri)
+        self.assertEqual(content['object_id'], item.object_id)
+        self.assertEqual(content['id'], item.id)
+        self.assertEqual(content['content_object']['resource_uri'], bar_uri)
+
+    def test_gfk_get_detail_no_resource_map(self):
         bar = Bar.objects.create(name='A bar')
         item = Item.objects.create(
             object_id=bar.id,
