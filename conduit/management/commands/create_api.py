@@ -24,7 +24,7 @@ class Command(BaseCommand):
         folder = options.get('folder', None)
         if folder:
             wd = os.getcwd()
-            api_folder = os.path.join(wd, 'api')
+            api_folder = os.path.join(wd, folder)
             api_init = os.path.join(api_folder, '__init__.py')
             api_urls = os.path.join(api_folder, 'urls.py')
             api_views = os.path.join(api_folder, 'views.py')

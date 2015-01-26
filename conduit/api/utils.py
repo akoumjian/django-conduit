@@ -158,6 +158,7 @@ class AutoAPI(object):
         # Iterate through related fields
         for name, field in related_fields.items():
             related_model = field.related.parent_model
+            print name, field, related_model
             # If a resource already exists on the api with this model
             # use that resource
             related_resource_instance = self.api._by_model.get(related_model, [None])[0]
@@ -166,7 +167,7 @@ class AutoAPI(object):
                 related_resource = related_resource_instance.__class__
             # Otherwise we create a new resource and attach it to the api
             else:
-                related_resource = self._gen_resource(model)
+                related_resource = self._gen_resource(related_model)
                 related_resource_instance = related_resource()
                 self.api.register(related_resource_instance)
 
