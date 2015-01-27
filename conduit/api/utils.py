@@ -33,13 +33,13 @@ class SelfDescModelResource(ModelResource):
         if not attributes:
             return ''
         fields = []
-        field_template = "{0} = {1}(attribute='{2}', resource_cls={3}Resource)"
+        field_template = "{0} = {1}(attribute='{2}', resource_cls='{3}Resource')"
         for att in attributes:
             keyword = att[0]
             field_type = att[1].__class__.__name__
             field_att = att[1].attribute
-            field_res_cls = att[1].resource_cls.Meta.model.__name__
-            field_str = field_template.format(keyword, field_type, field_att, field_res_cls)
+            field_res_cls_str = '{0}.views.{1}'.format(self.__api_app_name__, att[1].resource_cls.Meta.model.__name__)
+            field_str = field_template.format(keyword, field_type, field_att, field_res_cls_str)
             fields.append(field_str)
 
         buff = ''
@@ -62,12 +62,15 @@ class AutoAPI(object):
     Automatically create sample APIs from Django Apps or Models
     """
 
-    def __init__(self, *app_names):
+    def __init__(self, *app_names, **options):
         """
         app_names: One or more fully qualified django app names
 
         ie: api = AutoAPI('django.contrib.auth', 'example')
         """
+        self.api_app_name = options.get('folder')
+        if self.api_app_name is None:
+            self.api_app_name = 'api'
         self.api = Api()
         apps = []
         if app_names:
@@ -94,7 +97,7 @@ class AutoAPI(object):
         buff += '\nfrom conduit.api import Api'
 
         # Resource import string
-        import_tmp = '\nfrom api.views import {0}'
+        import_tmp = '\nfrom .views import {0}'
         res_names = [res.Meta.model.__name__ + 'Resource' for res in self.api._resources]
         buff += import_tmp.format(', '.join(res_names))
         buff += '\n\n'
@@ -148,6 +151,7 @@ class AutoAPI(object):
                 pass
 
         AutoModelResource.Meta.model = model
+        AutoModelResource.__api_app_name__ = self.api_app_name
 
         return AutoModelResource
 
@@ -158,7 +162,6 @@ class AutoAPI(object):
         # Iterate through related fields
         for name, field in related_fields.items():
             related_model = field.related.parent_model
-            print name, field, related_model
             # If a resource already exists on the api with this model
             # use that resource
             related_resource_instance = self.api._by_model.get(related_model, [None])[0]
