@@ -30,7 +30,7 @@ class Conduit(object):
             # Wrap the request in a transaction
             # If we see an exception (such as HttpInterrupt)
             # all model changes will be rolled back
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 for method_string in self.Meta.conduit[:-1]:
                     bound_method = self._get_method(method_string)
                     (request, args, kwargs,) = bound_method( request, *args, **kwargs)
