@@ -1,6 +1,5 @@
 from importlib import import_module
 from conduit.exceptions import HttpInterrupt
-from django.db import transaction
 
 try:
     from django.db.transaction import atomic as transaction_method
