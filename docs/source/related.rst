@@ -1,7 +1,7 @@
 Related Resources & Objects
 ===========================
 
-``django-conduit`` treats related ForeignKey and ManyToMany objects in an intuitive and efficient manner. You can use related resources to treat them similarly to Django's ORM, or you can default to their simple behavior as pointers to primary keys.
+``django-conduit`` treats related ForeignKey, GenericForeignKey, and ManyToMany objects in an intuitive and efficient manner. You can use related resources to treat them similarly to Django's ORM, or you can default to their simple behavior as pointers to primary keys.
 
 
 Related Resource Fields
@@ -111,6 +111,58 @@ Similarly if you PUT to ``/api/v1/foo/1/`` and omit one of the existing Baz obje
 
 The above request will remove all but the Baz 1 object from Foo's bazzes field.
 
+GenericForeignKeyField
+----------------------
+
+When a model should relate to multiple types of models, Django provides the GenericForeignKey field and ContentTypes framework, allowing a model to relate to multiple models based on a ContentType and Id.
+
+If a model is using Django's ``GenericForeignKey``, the ``GenericForeignKeyField`` provided by Conduit can be used to setup a resource.
+
+Here's an example of a model using a GenericForeignKey::
+
+    from django.contrib.contenttypes import generic
+    from django.contrib.contenttypes.models import ContentType
+    from django.db import models
+
+    class Item(models.Model):
+        content_type = models.ForeignKey(ContentType)
+        object_id = models.PositiveIntegerField()
+        content_object = generic.GenericFreignKey('content_object', 'object_id')
+
+A ``ModelResource`` using Conduit's ``GenericForeignKeyField`` would look like this::
+
+    from conduit.api import ModelResource
+    from conduit.api.fields import GenericForeignKeyField
+
+    from myapp.models import Item
+
+    class ItemResource(ModelResource):
+        class Meta(ModelResource.Meta):
+            model = Item
+
+        class Fields:
+            content_object = GenericForeignKeyField(
+                attribute='content_object',
+                resource_map={
+                    'Bar': 'api.views.BarResource',
+                    'Foo': 'api.views.FooResource',
+                }
+            )
+
+The ``resource_map`` attribute enables the resource to lookup a related resource based on it's ``Model`` defined by the `ContentType`. In this example we use the `Foo` and `Bar` models and resources explained above.
+
+Here is an example of what the api would return for a GET request::
+
+    {
+        "object_id": 1,
+        "content_object": "/api/v1/bar/1/",
+        "id": 1,
+        "content_type": 8,
+        "resource_uri": "/api/v1/item/1/"
+    }
+
+If ``embed=True`` is set, then the full related resource will be included using the same behavior for a ``ForeignKeyField`` or ``ManyToManyField``.
+
 
 Customizing Related Resource Fields
 -----------------------------------
@@ -147,9 +199,9 @@ A subclassed FK field which adds a custom additional step to the pipeline would 
 
 
 Default Behavior
-=======================
+================
 
-By default, conduit will serialize your model's related object fields by their raw value. A ForeignKey field will produce the primary key of your related object. A ManyToMany field will product a list of primary keys.
+By default, conduit will serialize your model's related object fields by their raw value. A ForeignKey field will produce the primary key of your related object. A ManyToMany field will produce a list of primary keys.
 
 An example resource Foo has one FK and one M2M field::
 

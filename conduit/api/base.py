@@ -1,10 +1,13 @@
 import json
 import six
+
 from django.http import HttpResponse
 from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
 from django.conf.urls import url
+from django.contrib.contenttypes import generic
+
 from decimal import Decimal
 from dateutil import parser
 
@@ -17,17 +20,17 @@ from conduit.exceptions import HttpInterrupt
 
 
 class Api(object):
-    _resources = []
-    # Reference attached resources by model type
-    _by_model = {}
-    # List model names by app models module
-    _app_models = {}
 
     def __init__(self, name='v1'):
         self.name = name
+        self._resources = []
+        # Reference attached resources by model type
+        self._by_model = {}
+        # List model names by app models module
+        self._app_models = {}
 
     def register(self, resource_instance):
-        # Add to list of resources
+        # Add to list of resources 
         self._resources.append(resource_instance)
         # Add to dict of resources by model name
         model = getattr(resource_instance.Meta, 'model', None)
@@ -202,6 +205,7 @@ class ModelResource(Resource):
             'form_validate',
             'limit_get_list',
             'save_fk_objs',
+            'save_gfk_objs',
             'update_objs_from_data',
             'save_m2m_objs',
             'get_detail',
@@ -248,8 +252,9 @@ class ModelResource(Resource):
 
     def _get_explicit_field_by_type(self, related=None):
         """
-        Filter specified fields on resource based on 'related' attribute
+        Returns fields that are explicitly coded onto the resource
 
+        Filter specified fields on resource based on 'related' attribute
         related values may be 'fk', 'm2m', 'gfk'
         """
         fields = self._get_explicit_fields()
@@ -633,6 +638,7 @@ class ModelResource(Resource):
             fk_fieldnames.extend(self._get_explicit_field_by_type('fk'))
             # Make sure names are unique
             fk_fieldnames = set(fk_fieldnames)
+
             for fieldname in fk_fieldnames:
                 # Get the data to process
                 related_data = request_data[fieldname]
@@ -654,6 +660,28 @@ class ModelResource(Resource):
                     id_fieldname = '{0}_id'.format(fieldname)
                     setattr(obj, id_fieldname, related_data)
 
+        return request, args, kwargs
+
+    @subscribe(sub=['post', 'put'])
+    def save_gfk_objs(self, request, *args, **kwargs):
+        for bundle in kwargs['bundles']:
+            obj = bundle['obj']
+            request_data = bundle['request_data']
+
+            # GFKs must be explicitly stated on Resource
+            gfk_fieldnames = self._get_explicit_field_by_type('gfk')
+
+            for fieldname in gfk_fieldnames:
+                related_data = request_data[fieldname]
+                conduit_field = self._get_explicit_field_by_attribute(fieldname)
+
+                if conduit_field:
+                    try:
+                        conduit_field.save_related(request, self, obj, related_data)
+                    except HttpInterrupt as e:
+                        error_dict = {fieldname: json.loads(e.response.content)}
+                        response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                        raise HttpInterrupt(response)
         return request, args, kwargs
 
     @subscribe(sub=['post', 'put'])
@@ -771,7 +799,7 @@ class ModelResource(Resource):
             obj_data = {}
             for fieldname in self._get_model_fields(obj):
                 field = obj._meta.get_field_by_name(fieldname)[0]
-                
+
                 dehydrated_value = self._to_basic_type(obj, field)
                 obj_data[fieldname] = dehydrated_value
 
