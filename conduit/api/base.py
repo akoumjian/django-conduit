@@ -443,8 +443,9 @@ class ModelResource(Resource):
             return data
 
         if isinstance(field, models.IntegerField):
-            if data:
-                return int(data)
+            if isinstance(data, int):
+                return data
+            return int(data)
 
         if isinstance(field, models.FloatField):
             return float(data)
