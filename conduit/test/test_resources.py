@@ -62,6 +62,38 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(item_1.content_object.name, 'Bar name one')
         self.assertEqual(item_2.content_object.name, 'Bar name two')
 
+    def test_gfk_embed(self):
+        data = [
+            {
+                'content_type': self.bar_ctype.id,
+                'content_object': {
+                    'name': 'Bar name one'
+                }
+            }
+        ]
+        item_uri = self.item_resource._get_resource_uri()
+        self.client.post(
+            item_uri,
+            json.dumps(data),
+            content_type='application/json'
+        )
+
+        bar = Bar.objects.get(name='Bar name one')
+        ctype = ContentType.objects.get(name='bar')
+        response = self.client.get(item_uri)
+        content = json.loads(response.content)
+
+        self.assertEqual(content['meta']['total'], 1)
+
+        bar_resource = content['objects'][0]
+        self.assertEqual(bar_resource['object_id'], bar.id)
+        self.assertEqual(bar_resource['content_type_id'], ctype.id)
+
+        self.assertIsInstance(bar_resource['content_object'], dict)
+        self.assertEqual(bar_resource['content_object']['id'], bar.id)
+        self.assertEqual(bar_resource['content_object']['name'], bar.name)
+        self.assertEqual(bar_resource['content_object']['resource_uri'], '/api/v1/bar/1/')
+
     def test_gfk_get_detail(self):
         bar = Bar.objects.create(name='A bar')
         item = Item.objects.create(
