@@ -81,7 +81,7 @@ class ResourceTestCase(ConduitTestCase):
         bar = Bar.objects.get(name='Bar name one')
         ctype = ContentType.objects.get(name='bar')
         response = self.client.get(item_uri)
-        content = json.loads(response.content)
+        content = json.loads(response.content.decode())
 
         self.assertEqual(content['meta']['total'], 1)
 
