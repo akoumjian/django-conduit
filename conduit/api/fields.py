@@ -1,9 +1,7 @@
 import six
 from importlib import import_module
 from django.core.urlresolvers import resolve
-
-class APIField(object):
-    pass
+from django.db.models.loading import get_model
 
 
 def import_class(resource_cls_str):
@@ -16,47 +14,7 @@ def import_class(resource_cls_str):
     return resource_cls
 
 
-class ForeignKeyField(APIField):
-    dehydrate_conduit = (
-        'bundles_from_objs',
-        'auth_get_detail',
-        'auth_get_list',
-        'auth_put_detail',
-        'auth_put_list',
-        'auth_post_detail',
-        'auth_post_list',
-        'auth_delete_detail',
-        'auth_delete_list',
-        'response_data_from_bundles',
-        'dehydrate_explicit_fields',
-        'add_resource_uri',
-    )
-
-    save_conduit = (
-        'check_allowed_methods',
-        'get_object_from_kwargs',
-        'hydrate_request_data',
-        'bundles_from_request_data',
-        'auth_get_detail',
-        'auth_get_list',
-        'auth_put_detail',
-        'auth_put_list',
-        'auth_post_detail',
-        'auth_post_list',
-        'auth_delete_detail',
-        'auth_delete_list',
-        'form_validate',
-        'save_fk_objs',
-        'update_objs_from_data',
-        'save_m2m_objs',
-    )
-
-    def __init__(self, attribute=None, resource_cls=None, embed=False):
-        self.related = 'fk'
-        self.attribute = attribute
-        self.embed = embed
-        self.resource_cls = resource_cls
-
+class APIField(object):
     def setup_resource(self):
         """
         Lazy load importing resource cls
@@ -69,38 +27,7 @@ class ForeignKeyField(APIField):
         if isinstance(self.resource_cls, six.string_types):
             self.resource_cls = import_class(self.resource_cls)
 
-    def dehydrate(self, request, parent_inst, bundle=None):
-        """
-        Dehydrates a related object by running methods on a related resource
-        """
-        self.setup_resource()
-        # build our request, args, kwargs to simulate regular request
-        args = []
-        obj = getattr(bundle['obj'], self.attribute)
-        kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
-        resource = self.resource_cls()
-        resource.Meta.api = parent_inst.Meta.api
-
-        ## Only run dehydrate if we are embedding the resource
-        if self.embed:
-            for methodname in self.dehydrate_conduit:
-                bound_method = resource._get_method(methodname)
-                (request, args, kwargs,) = bound_method(request, *args, **kwargs)
-            # Grab the dehydrated data and place it on the parent's bundle
-            related_bundle = kwargs['bundles'][0]
-            bundle['response_data'][self.attribute] = related_bundle['response_data']
-        ## By default we just include the resource uri
-        else:
-            resource_uri = resource._get_resource_uri(obj=obj)
-            bundle['response_data'][self.attribute] = resource_uri
-        return bundle
-
-    def save_related(self, request, parent_inst, obj, rel_obj_data):
-        """
-        Save the related object from data provided
-        """
-        self.setup_resource()
-
+    def build_obj_and_kwargs(self, rel_obj_data):
         ## rel_obj_data is either int, uri string, or dict
         ## If int or uri, we are fetching object and attaching to FK
         ## If dict, we could be creating an FK or updating one in place
@@ -136,6 +63,85 @@ class ForeignKeyField(APIField):
             else:
                 # Creating a new object
                 kwargs['pub'] = ['post', 'list']
+
+        return args, kwargs
+
+
+class ForeignKeyField(APIField):
+    dehydrate_conduit = (
+        'bundles_from_objs',
+        'auth_get_detail',
+        'auth_get_list',
+        'auth_put_detail',
+        'auth_put_list',
+        'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
+        'response_data_from_bundles',
+        'dehydrate_explicit_fields',
+        'add_resource_uri',
+    )
+
+    save_conduit = (
+        'check_allowed_methods',
+        'get_object_from_kwargs',
+        'hydrate_request_data',
+        'bundles_from_request_data',
+        'auth_get_detail',
+        'auth_get_list',
+        'auth_put_detail',
+        'auth_put_list',
+        'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
+        'form_validate',
+        'save_fk_objs',
+        'save_gfk_objs',
+        'update_objs_from_data',
+        'save_m2m_objs',
+    )
+
+    def __init__(self, attribute=None, resource_cls=None, embed=False):
+        self.related = 'fk'
+        self.attribute = attribute
+        self.embed = embed
+        self.resource_cls = resource_cls
+
+    def dehydrate(self, request, parent_inst, bundle=None):
+        """
+        Dehydrates a related object by running methods on a related resource
+        """
+        self.setup_resource()
+        # build our request, args, kwargs to simulate regular request
+        args = []
+        obj = getattr(bundle['obj'], self.attribute)
+        kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
+        resource = self.resource_cls()
+        resource.Meta.api = parent_inst.Meta.api
+
+        ## Only run dehydrate if we are embedding the resource
+        if self.embed:
+            for methodname in self.dehydrate_conduit:
+                bound_method = resource._get_method(methodname)
+                (request, args, kwargs,) = bound_method(request, *args, **kwargs)
+            # Grab the dehydrated data and place it on the parent's bundle
+            related_bundle = kwargs['bundles'][0]
+            bundle['response_data'][self.attribute] = related_bundle['response_data']
+        ## By default we just include the resource uri
+        else:
+            resource_uri = resource._get_resource_uri(obj=obj)
+            bundle['response_data'][self.attribute] = resource_uri
+        return bundle
+
+    def save_related(self, request, parent_inst, obj, rel_obj_data):
+        """
+        Save the related object from data provided
+        """
+        self.setup_resource()
+
+        args, kwargs = self.build_obj_and_kwargs(rel_obj_data)
 
         resource = self.resource_cls()
         resource.Meta.api = parent_inst.Meta.api
@@ -183,6 +189,7 @@ class ManyToManyField(APIField):
         'auth_delete_list',
         'form_validate',
         'save_fk_objs',
+        'save_gfk_objs',
         'update_objs_from_data',
         'save_m2m_objs',
     )
@@ -192,18 +199,6 @@ class ManyToManyField(APIField):
         self.attribute = attribute
         self.embed = embed
         self.resource_cls = resource_cls
-
-    def setup_resource(self):
-        """
-        Lazy load importing resource cls
-        """
-        # If we don't do this, imports will fail when trying
-        # to import resources in the same file as the related
-        # Field instantiation
-        # If we are passed the string rep of a resource
-        # class in python dot notation, import it
-        if isinstance(self.resource_cls, six.string_types):
-            self.resource_cls = import_class(self.resource_cls)
 
     def dehydrate(self, request, parent_inst, bundle=None):
         """
@@ -302,3 +297,135 @@ class ManyToManyField(APIField):
             related_manager.add(related_obj)
 
         return related_objs
+
+
+class GenericForeignKeyField(APIField):
+    dehydrate_conduit = (
+        'bundles_from_objs',
+        'auth_get_detail',
+        'auth_get_list',
+        'auth_put_detail',
+        'auth_put_list',
+        'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
+        'response_data_from_bundles',
+        'dehydrate_explicit_fields',
+        'add_resource_uri',
+    )
+
+    save_conduit = (
+        'check_allowed_methods',
+        'get_object_from_kwargs',
+        'bundles_from_objs',
+        'hydrate_request_data',
+        'bundles_from_request_data',
+        'auth_get_detail',
+        'auth_get_list',
+        'auth_put_detail',
+        'auth_put_list',
+        'auth_post_detail',
+        'auth_post_list',
+        'auth_delete_detail',
+        'auth_delete_list',
+        'form_validate',
+        'save_fk_objs',
+        'save_gfk_objs',
+        'update_objs_from_data',
+        'save_m2m_objs',
+    )
+
+    def __init__(self, attribute=None, resource_map=None, embed=False):
+        self.related = 'gfk'
+        self.attribute = attribute
+        self.embed = embed
+        self.resource_cls = None
+        self.resource_map = resource_map or {}
+
+    def get_gfk_field_by_attr(self, model_or_obj, attribute):
+        """
+        Get the GFK Field object by attribute name from model or obj
+        """
+        for virtual_field in model_or_obj._meta.virtual_fields:
+            if virtual_field.name == attribute:
+                return virtual_field
+        raise Exception('GenericForeignKey "{0}" not found on "{1}"'.format(attribute, model_or_obj))
+
+    def setup_resource(self, obj=None, api=None):
+        """
+        Resource must be set every request since GFK points to different models
+        """
+        # Get the model field that represents the GFK
+        gfk_field = self.get_gfk_field_by_attr(obj, self.attribute)
+        content_type = getattr(obj, gfk_field.ct_field)
+        model = get_model(content_type.app_label, content_type.name)
+
+        self.resource_cls = self.fetch_resource(model, api=api)
+
+        if isinstance(self.resource_cls, six.string_types):
+            self.resource_cls = import_class(self.resource_cls)
+
+    def fetch_resource(self, model, api=None):
+        """
+        Retrieves the Resource class of a GenericForeignKeyField resource_map
+        attribute based on a model. First looks for `app_name.Model_name`,
+        falling back to `Model_name`.
+
+        If no resource_map is specified it will fall back to the API 
+        """
+        app_label = model._meta.app_label
+        model_name = model.__name__
+
+        resource = self.resource_map.get('{0}{1}'.format(app_label, model_name), None)
+        if resource is None:
+            resource = self.resource_map.get(model_name, None)
+
+        # As a last ditch effort, query the API object for the resource class
+        if resource is None:
+            # If registered with API, we can find Resource class that way
+            if api:
+                resource_instances = api._by_model.get(model, None)
+                if resource_instances:
+                    resource_inst = resource_instances[0]
+                    resource = resource_inst.__class__
+        return resource
+
+    def dehydrate(self, request, parent_inst, bundle=None):
+        obj = bundle['obj']
+        self.setup_resource(obj=obj, api=parent_inst.Meta.api)
+        resource = self.resource_cls()
+        resource.Meta.api = parent_inst.Meta.api
+
+        if self.embed:
+            args = []
+            kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
+            for methodname in self.dehydrate_conduit:
+                bound_method = resource._get_method(methodname)
+                (request, args, kwargs,) = bound_method(request, *args, **kwargs)
+            # Grab the dehydrated data and place it on the parent's bundle
+            related_bundle = kwargs['bundles'][0]
+            bundle['response_data'][self.attribute] = related_bundle['response_data']
+        else:
+            resource_uri = resource._get_resource_uri(obj=obj)
+            bundle['response_data'][self.attribute] = resource_uri
+        return bundle
+
+    def save_related(self, request, parent_inst, obj, rel_obj_data):
+        self.setup_resource(obj=obj, api=parent_inst.Meta.api)
+
+        resource = self.resource_cls()
+        resource.Meta.api = parent_inst.Meta.api
+
+        args, kwargs = self.build_obj_and_kwargs(rel_obj_data)
+
+        for methodname in self.save_conduit:
+            bound_method = resource._get_method(methodname)
+            (request, args, kwargs,) = bound_method(request, *args, **kwargs)
+
+        # Now we have to update the FK reference on the original object
+        # before saving
+        related_obj = kwargs['bundles'][0]['obj']
+        setattr(obj, self.attribute, related_obj)
+
+        return related_obj

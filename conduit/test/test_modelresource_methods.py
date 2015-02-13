@@ -177,6 +177,57 @@ class MethodTestCase(ConduitTestCase):
         request, args, kwargs = self.resource.hydrate_request_data(post_list, **kwargs)
         self.assertEqual([post_hydrate_data], kwargs['request_data'])
 
+    def test_integer_field_with_zero(self):
+        self.resource.Meta.model = Foo
+        post_hydrate_data = {
+            'bar': {
+                'name': 'New Bar',
+            },
+            'bazzes': [
+                {
+                    'name': 'New Baz'
+                },
+            ],
+            'birthday': datetime.datetime(2013, 6, 19),
+            'boolean': False,
+            'created': datetime.datetime(2013, 6, 21, 1, 44, 57, 367956, tzinfo=dateutil.tz.tzutc()),
+            'decimal': Decimal('110.12'),
+            'file_field': 'test/test.txt',
+            'float_field': 100000.123456789,
+            'id': 1,
+            'integer': 0,
+            'name': 'Foo Name',
+            'text': 'text goes here'
+        }
+
+        request_data = {
+            'bar': {
+                'name': 'New Bar',
+            },
+            'bazzes': [
+                {
+                    'name': 'New Baz',
+                }
+            ],
+            'birthday': '2013-06-19',
+            'boolean': False,
+            'created': '2013-06-21T01:44:57.367956+00:00',
+            'decimal': '110.12',
+            'file_field': 'test/test.txt',
+            'float_field': 100000.123456789,
+            'id': 1,
+            'integer': 0,
+            'name': 'Foo Name',
+            'text': 'text goes here'
+        }
+        kwargs = {
+            'request_data': [request_data],
+            'pub': ['post', 'list']
+        }
+        post_list = self.factory.post('/foo/')
+        request, args, kwargs = self.resource.hydrate_request_data(post_list, **kwargs)
+        self.assertEqual([post_hydrate_data], kwargs['request_data'])
+
     def test_form_validate(self):
         class BarForm(forms.ModelForm):
             class Meta:
