@@ -392,8 +392,9 @@ class GenericForeignKeyField(APIField):
         return resource
 
     def dehydrate(self, request, parent_inst, bundle=None):
-        obj = bundle['obj']
-        self.setup_resource(obj=obj, api=parent_inst.Meta.api)
+        # obj = bundle['obj']
+        obj = getattr(bundle['obj'], self.attribute)
+        self.setup_resource(obj=bundle['obj'], api=parent_inst.Meta.api)
         resource = self.resource_cls()
         resource.Meta.api = parent_inst.Meta.api
 
