@@ -87,7 +87,7 @@ class ResourceTestCase(ConduitTestCase):
 
         bar_resource = content['objects'][0]
         self.assertEqual(bar_resource['object_id'], bar.id)
-        self.assertEqual(bar_resource['content_type_id'], ctype.id)
+        self.assertEqual(bar_resource['content_type'], ctype.id)
 
         self.assertIsInstance(bar_resource['content_object'], dict)
         self.assertEqual(bar_resource['content_object']['id'], bar.id)
