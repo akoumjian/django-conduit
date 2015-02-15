@@ -642,11 +642,14 @@ class ModelResource(Resource):
 
             for fieldname in fk_fieldnames:
                 # Get the data to process
-                related_data = request_data[fieldname]
-        
+                try:
+                    related_data = request_data[fieldname]
+                except KeyError:
+                    related_data = None
+
                 # If we are using a related resource field, use it
                 conduit_field = self._get_explicit_field_by_attribute(fieldname)
-                if conduit_field:
+                if conduit_field and related_data:
                     try:
                         conduit_field.save_related(request, self, obj, related_data)
                     except HttpInterrupt as e:
@@ -657,7 +660,7 @@ class ModelResource(Resource):
                         raise HttpInterrupt(response)
 
                 # Otherwise we do it simply with primary keys
-                else:
+                elif related_data:
                     id_fieldname = '{0}_id'.format(fieldname)
                     setattr(obj, id_fieldname, related_data)
 
@@ -825,7 +828,8 @@ class ModelResource(Resource):
         Add the resource uri to each bundles response data
         """
         for bundle in kwargs['bundles']:
-            bundle['response_data']['resource_uri'] = self._get_resource_uri(obj=bundle['obj'])
+            if bundle['obj']:
+                bundle['response_data']['resource_uri'] = self._get_resource_uri(obj=bundle['obj'])
         return request, args, kwargs
 
     def _to_basic_type(self, obj, field):

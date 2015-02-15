@@ -266,3 +266,23 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(content['integer'], 12)
         self.assertEqual(content['name'], 'Foo Name')
         self.assertEqual(content['text'], 'text goes here')
+
+    def test_null_fk(self):
+        data = {
+            'bazzes': {},
+            'boolean': False,
+            'decimal': '110.12',
+            'float_field': 100000.123456789,
+            'integer': 12,
+            'name': 'Foo Name',
+            'text': 'text goes here'
+        }
+        resource_uri = self.foo_resource._get_resource_uri()
+        response = self.client.post(
+            resource_uri,
+            json.dumps(data),
+            content_type='application/json'
+        )
+        content = json.loads(response.content.decode())
+
+        self.assertEqual(content['bar'], {})
