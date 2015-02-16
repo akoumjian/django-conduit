@@ -724,11 +724,14 @@ class ModelResource(Resource):
             m2m_fieldnames = set(m2m_fieldnames)
             for fieldname in m2m_fieldnames:
                 # Get the data to process
-                related_data = request_data[fieldname]
-        
+                try:
+                    related_data = request_data[fieldname]
+                except KeyError:
+                    related_data = None
+
                 # If we are using a related resource field, use it
                 conduit_field = self._get_explicit_field_by_attribute(fieldname)
-                if conduit_field:
+                if conduit_field and related_data:
                     try:
                         conduit_field.save_related(request, self, obj, related_data)
                     except HttpInterrupt as e:
@@ -739,7 +742,7 @@ class ModelResource(Resource):
                         raise HttpInterrupt(response)
 
                 # Otherwise we do it simply with primary keys
-                else:
+                elif related_data:
                     related_manager = getattr(obj, fieldname)
                     # Remove any pk's not included in related_data
                     for attached_pk in related_manager.all().values_list('pk', flat=True):

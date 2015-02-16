@@ -267,9 +267,10 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(content['name'], 'Foo Name')
         self.assertEqual(content['text'], 'text goes here')
 
-    def test_fk_empty_data(self):
+    def test_related_fields_empty_data(self):
         data = {
-            'bazzes': {},
+            # 'bar': {},
+            # 'bazzes': {},
             'boolean': False,
             'decimal': '110.12',
             'float_field': 100000.123456789,
@@ -285,8 +286,21 @@ class ResourceTestCase(ConduitTestCase):
         )
         content = json.loads(response.content.decode())
         self.assertEqual(content['bar'], {})
+        self.assertEqual(content['bazzes'], [])
+
+        data['bar'] = {}
+        data['bazzes'] = {}
+        response = self.client.post(
+            resource_uri,
+            json.dumps(data),
+            content_type='application/json'
+        )
+        content = json.loads(response.content.decode())
+        self.assertEqual(content['bar'], {})
+        self.assertEqual(content['bazzes'], [])
 
         data['bar'] = {'name': 'A bar'}
+        data['bazzes'] = [{'name': 'Another bar'}]
         response = self.client.post(
             resource_uri,
             json.dumps(data),
@@ -294,3 +308,5 @@ class ResourceTestCase(ConduitTestCase):
         )
         content = json.loads(response.content.decode())
         self.assertEqual(content['bar']['name'], 'A bar')
+        self.assertEqual(len(content['bazzes']), 1)
+        self.assertEqual(content['bazzes'][0]['name'], 'Another bar')
