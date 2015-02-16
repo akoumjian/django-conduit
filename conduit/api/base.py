@@ -676,10 +676,14 @@ class ModelResource(Resource):
             gfk_fieldnames = self._get_explicit_field_by_type('gfk')
 
             for fieldname in gfk_fieldnames:
-                related_data = request_data[fieldname]
+                try:
+                    related_data = request_data[fieldname]
+                except KeyError:
+                    related_data = None
+
                 conduit_field = self._get_explicit_field_by_attribute(fieldname)
 
-                if conduit_field:
+                if conduit_field and related_data:
                     try:
                         conduit_field.save_related(request, self, obj, related_data)
                     except HttpInterrupt as e:
@@ -808,7 +812,8 @@ class ModelResource(Resource):
                 field = obj._meta.get_field_by_name(fieldname)[0]
 
                 dehydrated_value = self._to_basic_type(obj, field)
-                obj_data[fieldname] = dehydrated_value
+                if dehydrated_value is not None:
+                    obj_data[fieldname] = dehydrated_value
 
             # Update the bundle in place
             bundle['response_data'] = obj_data

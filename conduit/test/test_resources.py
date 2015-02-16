@@ -310,3 +310,39 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(content['bar']['name'], 'A bar')
         self.assertEqual(len(content['bazzes']), 1)
         self.assertEqual(content['bazzes'][0]['name'], 'Another bar')
+
+    def test_gfk_empty_data(self):
+        item_uri = self.item_resource._get_resource_uri()
+        response = self.client.post(
+            item_uri,
+            json.dumps({}),
+            content_type='application/json'
+        )
+        content = json.loads(response.content.decode())
+
+        self.assertTrue(content['id'])
+        self.assertTrue(content['resource_uri'])
+        self.assertNotIn('content_type', content)
+        self.assertNotIn('content_type_id', content)
+        self.assertNotIn('object_id', content)
+
+        bar = Bar.objects.create(name='A bar')
+        data = {
+            'id': content['id'],
+            'content_type': self.bar_ctype.id,
+            'object_id': bar.id
+        }
+
+        response = self.client.post(
+            item_uri,
+            json.dumps(data),
+            content_type='application/json'
+        )
+        content = json.loads(response.content.decode())
+
+        self.assertEqual(data['id'], content['id'])
+
+        content_object = content['content_object']
+        self.assertEqual(content_object['id'], bar.id)
+        self.assertEqual(content_object['name'], bar.name)
+        self.assertEqual(content_object['resource_url'], self.bar_resource._get_resource_uri(obj=bar))

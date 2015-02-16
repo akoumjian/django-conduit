@@ -359,9 +359,10 @@ class GenericForeignKeyField(APIField):
         # Get the model field that represents the GFK
         gfk_field = self.get_gfk_field_by_attr(obj, self.attribute)
         content_type = getattr(obj, gfk_field.ct_field)
-        model = get_model(content_type.app_label, content_type.name)
+        if content_type:
+            model = get_model(content_type.app_label, content_type.name)
 
-        self.resource_cls = self.fetch_resource(model, api=api)
+            self.resource_cls = self.fetch_resource(model, api=api)
 
         if isinstance(self.resource_cls, six.string_types):
             self.resource_cls = import_class(self.resource_cls)
@@ -394,7 +395,12 @@ class GenericForeignKeyField(APIField):
     def dehydrate(self, request, parent_inst, bundle=None):
         obj = bundle['obj']
         self.setup_resource(obj=obj, api=parent_inst.Meta.api)
-        resource = self.resource_cls()
+
+        try:
+            resource = self.resource_cls()
+        except TypeError:
+            return bundle
+
         resource.Meta.api = parent_inst.Meta.api
 
         if self.embed:
