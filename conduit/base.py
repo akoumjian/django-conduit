@@ -3,6 +3,7 @@ import logging
 logger = logging.getLogger( __name__ )
 from conduit.exceptions import HttpInterrupt
 
+# Django 1.7 deprecates `commit_on_success` in favor of `atmoic`
 try:
     from django.db.transaction import atomic as transaction_method
 except ImportError:
