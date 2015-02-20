@@ -62,6 +62,38 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(item_1.content_object.name, 'Bar name one')
         self.assertEqual(item_2.content_object.name, 'Bar name two')
 
+    def test_gfk_embed(self):
+        data = [
+            {
+                'content_type': self.bar_ctype.id,
+                'content_object': {
+                    'name': 'Bar name one'
+                }
+            }
+        ]
+        item_uri = self.item_resource._get_resource_uri()
+        self.client.post(
+            item_uri,
+            json.dumps(data),
+            content_type='application/json'
+        )
+
+        bar = Bar.objects.get(name='Bar name one')
+        ctype = ContentType.objects.get(name='bar')
+        response = self.client.get(item_uri)
+        content = json.loads(response.content.decode())
+
+        self.assertEqual(content['meta']['total'], 1)
+
+        bar_resource = content['objects'][0]
+        self.assertEqual(bar_resource['object_id'], bar.id)
+        self.assertEqual(bar_resource['content_type'], ctype.id)
+
+        self.assertIsInstance(bar_resource['content_object'], dict)
+        self.assertEqual(bar_resource['content_object']['id'], bar.id)
+        self.assertEqual(bar_resource['content_object']['name'], bar.name)
+        self.assertEqual(bar_resource['content_object']['resource_uri'], '/api/v1/bar/1/')
+
     def test_gfk_get_detail(self):
         bar = Bar.objects.create(name='A bar')
         item = Item.objects.create(
@@ -285,18 +317,18 @@ class ResourceTestCase(ConduitTestCase):
             content_type='application/json'
         )
         content = json.loads(response.content.decode())
-        self.assertEqual(content['bar'], {})
+        self.assertEqual(content['bar'], None)
         self.assertEqual(content['bazzes'], [])
 
-        data['bar'] = {}
-        data['bazzes'] = {}
+        data['bar'] = None
+        data['bazzes'] = []
         response = self.client.post(
             resource_uri,
             json.dumps(data),
             content_type='application/json'
         )
         content = json.loads(response.content.decode())
-        self.assertEqual(content['bar'], {})
+        self.assertEqual(content['bar'], None)
         self.assertEqual(content['bazzes'], [])
 
         data['bar'] = {'name': 'A bar'}
@@ -322,9 +354,9 @@ class ResourceTestCase(ConduitTestCase):
 
         self.assertTrue(content['id'])
         self.assertTrue(content['resource_uri'])
-        self.assertNotIn('content_type', content)
-        self.assertNotIn('content_type_id', content)
-        self.assertNotIn('object_id', content)
+        self.assertEqual(content['content_type'], None)
+        self.assertEqual(content['content_type_id'], None)
+        self.assertEqual(content['object_id'], None)
 
         bar = Bar.objects.create(name='A bar')
         data = {
