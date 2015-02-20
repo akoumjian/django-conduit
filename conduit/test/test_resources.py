@@ -345,4 +345,4 @@ class ResourceTestCase(ConduitTestCase):
         content_object = content['content_object']
         self.assertEqual(content_object['id'], bar.id)
         self.assertEqual(content_object['name'], bar.name)
-        self.assertEqual(content_object['resource_url'], self.bar_resource._get_resource_uri(obj=bar))
+        self.assertEqual(content_object['resource_uri'], self.bar_resource._get_resource_uri(obj=bar))
