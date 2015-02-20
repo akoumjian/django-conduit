@@ -117,22 +117,26 @@ class ForeignKeyField(APIField):
         # build our request, args, kwargs to simulate regular request
         args = []
         obj = getattr(bundle['obj'], self.attribute)
-        kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
-        resource = self.resource_cls()
-        resource.Meta.api = parent_inst.Meta.api
 
-        ## Only run dehydrate if we are embedding the resource
-        if self.embed:
-            for methodname in self.dehydrate_conduit:
-                bound_method = resource._get_method(methodname)
-                (request, args, kwargs,) = bound_method(request, *args, **kwargs)
-            # Grab the dehydrated data and place it on the parent's bundle
-            related_bundle = kwargs['bundles'][0]
-            bundle['response_data'][self.attribute] = related_bundle['response_data']
-        ## By default we just include the resource uri
-        else:
-            resource_uri = resource._get_resource_uri(obj=obj)
-            bundle['response_data'][self.attribute] = resource_uri
+        field_data = None
+        if obj is not None:
+            kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
+            resource = self.resource_cls()
+            resource.Meta.api = parent_inst.Meta.api
+            ## Only run dehydrate if we are embedding the resource
+            if self.embed:
+                for methodname in self.dehydrate_conduit:
+                    bound_method = resource._get_method(methodname)
+                    (request, args, kwargs,) = bound_method(request, *args, **kwargs)
+                # Grab the dehydrated data and place it on the parent's bundle
+                related_bundle = kwargs['bundles'][0]
+                field_data = related_bundle['response_data']
+            ## By default we just include the resource uri
+            else:
+                resource_uri = resource._get_resource_uri(obj=obj)
+                field_data = resource_uri
+
+        bundle['response_data'][self.attribute] = field_data
         return bundle
 
     def save_related(self, request, parent_inst, obj, rel_obj_data):
@@ -141,17 +145,19 @@ class ForeignKeyField(APIField):
         """
         self.setup_resource()
 
-        args, kwargs = self.build_obj_and_kwargs(rel_obj_data)
+        related_obj = None
+        if rel_obj_data is not None:
+            args, kwargs = self.build_obj_and_kwargs(rel_obj_data)
 
-        resource = self.resource_cls()
-        resource.Meta.api = parent_inst.Meta.api
-        for methodname in self.save_conduit:
-            bound_method = resource._get_method(methodname)
-            (request, args, kwargs,) = bound_method(request, *args, **kwargs)
+            resource = self.resource_cls()
+            resource.Meta.api = parent_inst.Meta.api
+            for methodname in self.save_conduit:
+                bound_method = resource._get_method(methodname)
+                (request, args, kwargs,) = bound_method(request, *args, **kwargs)
 
-        # Now we have to update the FK reference on the original object
-        # before saving
-        related_obj = kwargs['bundles'][0]['obj']
+            related_obj = kwargs['bundles'][0]['obj']
+
+        # Update fk field on parent obj
         setattr(obj, self.attribute, related_obj)
 
         return related_obj
@@ -395,38 +401,45 @@ class GenericForeignKeyField(APIField):
     def dehydrate(self, request, parent_inst, bundle=None):
         obj = getattr(bundle['obj'], self.attribute)
         self.setup_resource(obj=bundle['obj'], api=parent_inst.Meta.api)
-        resource = self.resource_cls()
-        resource.Meta.api = parent_inst.Meta.api
 
-        if self.embed:
-            args = []
-            kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
-            for methodname in self.dehydrate_conduit:
-                bound_method = resource._get_method(methodname)
-                (request, args, kwargs,) = bound_method(request, *args, **kwargs)
-            # Grab the dehydrated data and place it on the parent's bundle
-            related_bundle = kwargs['bundles'][0]
-            bundle['response_data'][self.attribute] = related_bundle['response_data']
-        else:
-            resource_uri = resource._get_resource_uri(obj=obj)
-            bundle['response_data'][self.attribute] = resource_uri
+        field_data = None
+        if obj is not None:
+            resource = self.resource_cls()
+            resource.Meta.api = parent_inst.Meta.api
+            if self.embed:
+                args = []
+                kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
+                for methodname in self.dehydrate_conduit:
+                    bound_method = resource._get_method(methodname)
+                    (request, args, kwargs,) = bound_method(request, *args, **kwargs)
+                # Grab the dehydrated data and place it on the parent's bundle
+                related_bundle = kwargs['bundles'][0]
+                field_data = related_bundle['response_data']
+            else:
+                resource_uri = resource._get_resource_uri(obj=obj)
+                field_data = resource_uri
+
+        bundle['response_data'][self.attribute] = field_data
         return bundle
 
     def save_related(self, request, parent_inst, obj, rel_obj_data):
         self.setup_resource(obj=obj, api=parent_inst.Meta.api)
 
-        resource = self.resource_cls()
-        resource.Meta.api = parent_inst.Meta.api
+        related_obj = None
+        if rel_obj_data is not None:
+            resource = self.resource_cls()
+            resource.Meta.api = parent_inst.Meta.api
 
-        args, kwargs = self.build_obj_and_kwargs(rel_obj_data)
+            args, kwargs = self.build_obj_and_kwargs(rel_obj_data)
 
-        for methodname in self.save_conduit:
-            bound_method = resource._get_method(methodname)
-            (request, args, kwargs,) = bound_method(request, *args, **kwargs)
+            for methodname in self.save_conduit:
+                bound_method = resource._get_method(methodname)
+                (request, args, kwargs,) = bound_method(request, *args, **kwargs)
 
-        # Now we have to update the FK reference on the original object
-        # before saving
-        related_obj = kwargs['bundles'][0]['obj']
+            # Now we have to update the FK reference on the original object
+            # before saving
+            related_obj = kwargs['bundles'][0]['obj']
+
         setattr(obj, self.attribute, related_obj)
 
         return related_obj

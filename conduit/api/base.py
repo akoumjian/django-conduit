@@ -12,7 +12,7 @@ from decimal import Decimal
 from dateutil import parser
 
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('conduit')
 
 from conduit import Conduit
 from conduit.subscribe import subscribe, avoid, match
@@ -641,28 +641,26 @@ class ModelResource(Resource):
             fk_fieldnames = set(fk_fieldnames)
 
             for fieldname in fk_fieldnames:
-                # Get the data to process
-                try:
-                    related_data = request_data[fieldname]
-                except KeyError:
-                    related_data = None
+                # Only updated the related field if data was specified
+                if fieldname in request_data:
+                    related_data = request_data.get(fieldname)
 
-                # If we are using a related resource field, use it
-                conduit_field = self._get_explicit_field_by_attribute(fieldname)
-                if conduit_field and related_data:
-                    try:
-                        conduit_field.save_related(request, self, obj, related_data)
-                    except HttpInterrupt as e:
-                        # Raise the error but specify it as occuring within
-                        # the related field
-                        error_dict = {fieldname: json.loads(e.response.content)}
-                        response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
-                        raise HttpInterrupt(response)
+                    # If we are using a related resource field, use it
+                    conduit_field = self._get_explicit_field_by_attribute(fieldname)
+                    if conduit_field:
+                        try:
+                            conduit_field.save_related(request, self, obj, related_data)
+                        except HttpInterrupt as e:
+                            # Raise the error but specify it as occuring within
+                            # the related field
+                            error_dict = {fieldname: json.loads(e.response.content)}
+                            response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                            raise HttpInterrupt(response)
 
-                # Otherwise we do it simply with primary keys
-                elif related_data:
-                    id_fieldname = '{0}_id'.format(fieldname)
-                    setattr(obj, id_fieldname, related_data)
+                    # Otherwise we do it simply with primary keys
+                    else:
+                        id_fieldname = '{0}_id'.format(fieldname)
+                        setattr(obj, id_fieldname, related_data)
 
         return request, args, kwargs
 
@@ -676,20 +674,17 @@ class ModelResource(Resource):
             gfk_fieldnames = self._get_explicit_field_by_type('gfk')
 
             for fieldname in gfk_fieldnames:
-                try:
-                    related_data = request_data[fieldname]
-                except KeyError:
-                    related_data = None
+                if fieldname in request_data:
+                    related_data = request_data.get(fieldname)
+                    conduit_field = self._get_explicit_field_by_attribute(fieldname)
 
-                conduit_field = self._get_explicit_field_by_attribute(fieldname)
-
-                if conduit_field and related_data:
-                    try:
-                        conduit_field.save_related(request, self, obj, related_data)
-                    except HttpInterrupt as e:
-                        error_dict = {fieldname: json.loads(e.response.content)}
-                        response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
-                        raise HttpInterrupt(response)
+                    if conduit_field and related_data:
+                        try:
+                            conduit_field.save_related(request, self, obj, related_data)
+                        except HttpInterrupt as e:
+                            error_dict = {fieldname: json.loads(e.response.content)}
+                            response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                            raise HttpInterrupt(response)
         return request, args, kwargs
 
     @subscribe(sub=['post', 'put'])
@@ -727,35 +722,33 @@ class ModelResource(Resource):
             m2m_fieldnames.extend(self._get_explicit_field_by_type('m2m'))
             m2m_fieldnames = set(m2m_fieldnames)
             for fieldname in m2m_fieldnames:
-                # Get the data to process
-                try:
-                    related_data = request_data[fieldname]
-                except KeyError:
-                    related_data = None
+                # Only update the field if it was specified in request
+                if fieldname in request_data:
+                    related_data = request_data.get(fieldname)
 
-                # If we are using a related resource field, use it
-                conduit_field = self._get_explicit_field_by_attribute(fieldname)
-                if conduit_field and related_data:
-                    try:
-                        conduit_field.save_related(request, self, obj, related_data)
-                    except HttpInterrupt as e:
-                        # Raise the error but specify it as occuring within
-                        # the related field
-                        error_dict = {fieldname: json.loads(e.response.content)}
-                        response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
-                        raise HttpInterrupt(response)
+                    # If we are using a related resource field, use it
+                    conduit_field = self._get_explicit_field_by_attribute(fieldname)
+                    if conduit_field and related_data:
+                        try:
+                            conduit_field.save_related(request, self, obj, related_data)
+                        except HttpInterrupt as e:
+                            # Raise the error but specify it as occuring within
+                            # the related field
+                            error_dict = {fieldname: json.loads(e.response.content)}
+                            response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                            raise HttpInterrupt(response)
 
-                # Otherwise we do it simply with primary keys
-                elif related_data:
-                    related_manager = getattr(obj, fieldname)
-                    # Remove any pk's not included in related_data
-                    for attached_pk in related_manager.all().values_list('pk', flat=True):
-                        if attached_pk not in related_data:
-                            related_manager.remove(attached_pk)
+                    # Otherwise we do it simply with primary keys
+                    elif related_data:
+                        related_manager = getattr(obj, fieldname)
+                        # Remove any pk's not included in related_data
+                        for attached_pk in related_manager.all().values_list('pk', flat=True):
+                            if attached_pk not in related_data:
+                                related_manager.remove(attached_pk)
 
-                    # Add all pk's included in related_data
-                    for related_pk in related_data:
-                        related_manager.add(related_pk)
+                        # Add all pk's included in related_data
+                        for related_pk in related_data:
+                            related_manager.add(related_pk)
 
         return request, args, kwargs
 

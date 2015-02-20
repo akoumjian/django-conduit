@@ -1,8 +1,9 @@
 from importlib import import_module
-import logging
-logger = logging.getLogger( __name__ )
 from conduit.exceptions import HttpInterrupt
 from django.db import transaction
+
+import logging
+logger = logging.getLogger('conduit')
 
 class Conduit(object):
     """
@@ -27,7 +28,6 @@ class Conduit(object):
         """
         Process the request as a Django view, return a response
         """
-        # self = cls()
         try:
             # Wrap the request in a transaction
             # If we see an exception (such as HttpInterrupt)
