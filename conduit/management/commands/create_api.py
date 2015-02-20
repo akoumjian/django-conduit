@@ -20,11 +20,11 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        api = AutoAPI(*args)
+        api = AutoAPI(*args, **options)
         folder = options.get('folder', None)
         if folder:
             wd = os.getcwd()
-            api_folder = os.path.join(wd, 'api')
+            api_folder = os.path.join(wd, folder)
             api_init = os.path.join(api_folder, '__init__.py')
             api_urls = os.path.join(api_folder, 'urls.py')
             api_views = os.path.join(api_folder, 'views.py')
@@ -40,6 +40,6 @@ class Command(BaseCommand):
 
             with open(api_views, 'w') as f:
                 f.write(api.__resource_str__())
-            return 'Created API files in {0}'.format(api_folder)
+            return 'Created API files in {0}\n'.format(api_folder)
         else:
             return api.__to_string__()

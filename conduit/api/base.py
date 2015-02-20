@@ -1,10 +1,13 @@
 import json
 import six
+
 from django.http import HttpResponse
 from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
 from django.conf.urls import url
+from django.contrib.contenttypes import generic
+
 from decimal import Decimal
 from dateutil import parser
 
@@ -17,17 +20,17 @@ from conduit.exceptions import HttpInterrupt
 
 
 class Api(object):
-    _resources = []
-    # Reference attached resources by model type
-    _by_model = {}
-    # List model names by app models module
-    _app_models = {}
 
     def __init__(self, name='v1'):
         self.name = name
+        self._resources = []
+        # Reference attached resources by model type
+        self._by_model = {}
+        # List model names by app models module
+        self._app_models = {}
 
     def register(self, resource_instance):
-        # Add to list of resources
+        # Add to list of resources 
         self._resources.append(resource_instance)
         # Add to dict of resources by model name
         model = getattr(resource_instance.Meta, 'model', None)
@@ -202,6 +205,7 @@ class ModelResource(Resource):
             'form_validate',
             'limit_get_list',
             'save_fk_objs',
+            'save_gfk_objs',
             'update_objs_from_data',
             'save_m2m_objs',
             'get_detail',
@@ -225,6 +229,9 @@ class ModelResource(Resource):
         return instance
 
     def _get_explicit_fields(self):
+        """
+        Return fields that are specified on resource vs those that are implicit
+        """
         fields = []
         field_meta = getattr(self, 'Fields', None)
         if field_meta:
@@ -234,6 +241,9 @@ class ModelResource(Resource):
         return fields
 
     def _get_explicit_field_by_attribute(self, attribute=None):
+        """
+        Grab the field objects on resource by its attribute name
+        """
         explicit_fields = self._get_explicit_fields()
         for field in explicit_fields:
             if field.attribute == attribute:
@@ -241,6 +251,12 @@ class ModelResource(Resource):
         return None
 
     def _get_explicit_field_by_type(self, related=None):
+        """
+        Returns fields that are explicitly coded onto the resource
+
+        Filter specified fields on resource based on 'related' attribute
+        related values may be 'fk', 'm2m', 'gfk'
+        """
         fields = self._get_explicit_fields()
         field_attributes = []
         for field in fields:
@@ -250,10 +266,11 @@ class ModelResource(Resource):
 
     def _get_model_fields(self, obj=None):
         """
-        Get all Django model fields on an obj
+        Get _all_ of the fields on a Django model
         """
         if not obj:
             obj = self.Meta.model
+        ## Django returns non-fields, like "id", so we filter them out
         field_names = obj._meta.get_all_field_names()
         real_fields = []
         for field_name in field_names:
@@ -263,7 +280,7 @@ class ModelResource(Resource):
 
     def _get_type_fieldnames(self, obj=None, field_type=None):
         """
-        Return all the fieldnames of a specific type
+        Returns the fieldnames on model of Django field type
         """
         if not obj:
             obj = self.Meta.model
@@ -278,6 +295,8 @@ class ModelResource(Resource):
     def build_pub(self, request, *args, **kwargs):
         """
         Builds a list of keywords relevant to this request
+
+        Used with pub/sub decorators in conduit.subscribe
         """
         pub = []
         pub.append(request.method.lower())
@@ -317,6 +336,12 @@ class ModelResource(Resource):
 
     @subscribe(sub=['get'])
     def process_filters(self, request, *args, **kwargs):
+        """
+        Grab filters from request params and create final list of ORM filters
+
+        Request filters will be checked against allowed_filters and
+        added to default_filters to create final list.
+        """
         # Collect and check filters coming in through request
         get_params = request.GET.copy()
 
@@ -362,7 +387,7 @@ class ModelResource(Resource):
     @match(match=['get', 'list'])
     def apply_filters(self, request, *args, **kwargs):
         """
-        run against filters before authorization checks
+        Filter fetched objects before running row level authorizations
 
         Makes per object authorization checks faster by
         limiting the instances it must iterate through
@@ -380,6 +405,9 @@ class ModelResource(Resource):
 
     @match(match=['get'])
     def bundles_from_objs(self, request, *args, **kwargs):
+        """
+        Creates a bundle for each object fetched during GET
+        """
         bundles = []
         for obj in kwargs['objs']:
             bundle = {}
@@ -390,6 +418,9 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def json_to_python(self, request, *args, **kwargs):
+        """
+        Creates a Python object from request JSON
+        """
         if request.body:
             data = request.body
             kwargs['request_data'] = json.loads(data.decode('UTF-8'))
@@ -412,8 +443,9 @@ class ModelResource(Resource):
             return data
 
         if isinstance(field, models.IntegerField):
-            if data:
-                return int(data)
+            if isinstance(data, int):
+                return data
+            return int(data)
 
         if isinstance(field, models.FloatField):
             return float(data)
@@ -478,6 +510,7 @@ class ModelResource(Resource):
     def bundles_from_request_data(self, request, *args, **kwargs):
         """
         Form pairings of request data and new or existing objects
+        Stores in bundles and objs lists.
         """
         bundles = []
         objs = []
@@ -545,6 +578,13 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def form_validate(self, request, *args, **kwargs):
+        """
+        Validates request data with a provided Django form
+
+        If the model object exists, it will pass it in to the form instance.
+        If the form produces errors, a response is returned with a JSON 
+        representation of the errors.
+        """
         form_class = getattr(self.Meta, 'form_class', None)
         if form_class:
             fieldnames = self._get_model_fields()
@@ -581,8 +621,14 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def save_fk_objs(self, request, *args, **kwargs):
-        # ForeignKey objects must be created and attached to the parent obj
-        # before saving the parent object, since the field may not be nullable
+        """
+        Updates and saves ForeignKey objects from hydrated request data.
+
+        If embed=True, the FK object will be updated or created here.
+
+        ForeignKey objects must be created and attached to the parent obj
+        before saving the parent object, since the field may not be nullable
+        """
         for bundle in kwargs['bundles']:
             obj = bundle['obj']
             request_data = bundle['request_data']
@@ -593,6 +639,7 @@ class ModelResource(Resource):
             fk_fieldnames.extend(self._get_explicit_field_by_type('fk'))
             # Make sure names are unique
             fk_fieldnames = set(fk_fieldnames)
+
             for fieldname in fk_fieldnames:
                 # Get the data to process
                 related_data = request_data[fieldname]
@@ -617,9 +664,34 @@ class ModelResource(Resource):
         return request, args, kwargs
 
     @subscribe(sub=['post', 'put'])
+    def save_gfk_objs(self, request, *args, **kwargs):
+        for bundle in kwargs['bundles']:
+            obj = bundle['obj']
+            request_data = bundle['request_data']
+
+            # GFKs must be explicitly stated on Resource
+            gfk_fieldnames = self._get_explicit_field_by_type('gfk')
+
+            for fieldname in gfk_fieldnames:
+                related_data = request_data[fieldname]
+                conduit_field = self._get_explicit_field_by_attribute(fieldname)
+
+                if conduit_field:
+                    try:
+                        conduit_field.save_related(request, self, obj, related_data)
+                    except HttpInterrupt as e:
+                        error_dict = {fieldname: json.loads(e.response.content)}
+                        response = self.create_json_response(py_obj=error_dict, status=e.response.status_code)
+                        raise HttpInterrupt(response)
+        return request, args, kwargs
+
+    @subscribe(sub=['post', 'put'])
     def update_objs_from_data(self, request, *args, **kwargs):
         """
-        Update the objects in place with processed request data
+        Update objs in place from hydrated / sanitized request data and save.
+
+        Obj could be existing model or empty/fresh class instance for new
+        models.
         """
         for bundle in kwargs['bundles']:
             obj = bundle['obj']
@@ -632,6 +704,11 @@ class ModelResource(Resource):
 
     @subscribe(sub=['post', 'put'])
     def save_m2m_objs(self, request, *args, **kwargs):
+        """
+        Adds or removes m2m objects to/from parent object. 
+
+        If m2m field is embed=True, will update m2m attributes or create new m2m objects
+        """
         ## Must be done after persisting parent objects
         for bundle in kwargs['bundles']:
             obj = bundle['obj']
@@ -723,7 +800,7 @@ class ModelResource(Resource):
             obj_data = {}
             for fieldname in self._get_model_fields(obj):
                 field = obj._meta.get_field_by_name(fieldname)[0]
-                
+
                 dehydrated_value = self._to_basic_type(obj, field)
                 obj_data[fieldname] = dehydrated_value
 

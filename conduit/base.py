@@ -1,4 +1,6 @@
 from importlib import import_module
+import logging
+logger = logging.getLogger( __name__ )
 from conduit.exceptions import HttpInterrupt
 
 try:
@@ -28,7 +30,7 @@ class Conduit(object):
 
     def view(self, request, *args, **kwargs):
         """
-        Process the request, return a response
+        Process the request as a Django view, return a response
         """
         # self = cls()
         try:
@@ -38,9 +40,20 @@ class Conduit(object):
             with transaction_method():
                 for method_string in self.Meta.conduit[:-1]:
                     bound_method = self._get_method(method_string)
+                    logger.debug( "\n[ {0} ]: kwargs = \n{1}".format( bound_method.__name__, kwargs ) )
                     (request, args, kwargs,) = bound_method( request, *args, **kwargs)
         except HttpInterrupt as e:
             return e.response
 
         bound_response_method = self._get_method(self.Meta.conduit[-1])
         return bound_response_method(request, *args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        """
+        Process conduit as a generic pipeline
+        """
+        for method_string in self.Meta.conduit:
+            bound_method = self._get_method(method_string)
+            (args, kwargs,) = bound_method(*args, **kwargs)
+        return args, kwargs
+

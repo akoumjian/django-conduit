@@ -130,8 +130,41 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'conduit',
     # 'api',
-    'example',
 )
+
+## GEO Specific Settings
+DATABASES['geodefault'] = {
+    'ENGINE': 'django.contrib.gis.db.backends.postgis' , 
+    'NAME': 'geoexample',                      
+    # 
+    #  NOTE: USER and PASSWORD below are defaulted to what Travis CI expects.
+    #  You can skip setting up this database and running these tests by using the --testrunner flag:
+    #  `python example/manage.py test --testrunner='conduit.test.non_geo_testrunner.NonGeoTestRunner'`
+    #
+    #  To run local tests you will need to:
+    #
+    #  0. create a spatially enabled database called 'geoexample'
+    #  ( see django-conduit/travis_postgis_setup.sh for examples )
+    #
+    #  1. set your pg_hba.conf postgres user METHOD to 'trust' ( which some people might not like ):
+    #  local   all             postgres                                trust
+    #
+    #  2. set your pg_hba.conf postgres user METHOD to 'md5' and change the PASSWORD below to match your postgres user
+    #  local   all             postgres                                md5
+    #
+    #  3. remember to restart postgresql server with new configs
+    #  sudo /etc/init.d/postgresql restart
+    #
+    #
+    'USER': 'postgres',
+    'PASSWORD': '',   
+    'HOST': '',                # Empty for localhost through domain sockets or '127.0.0.1' for localhost through TCP.
+    'PORT': '',                # Set to empty string for default.
+}
+
+INSTALLED_APPS += 'geoexample'
+DATABASE_ROUTERS = ['example.geo_db_router.GeoDbRouter']
+POSTGIS_VERSION = (2, 1)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to

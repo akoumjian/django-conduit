@@ -1,5 +1,6 @@
+from django.contrib.contenttypes import generic
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
-
 
 class Bar(models.Model):
     name = models.CharField(max_length=250)
@@ -21,3 +22,9 @@ class Foo(models.Model):
     file_field = models.FileField(upload_to='test')
     bar = models.ForeignKey(Bar, null=True)
     bazzes = models.ManyToManyField(Baz)
+
+
+class Item(models.Model):
+    content_type = models.ForeignKey(ContentType)
+    object_id = models.PositiveIntegerField()
+    content_object = generic.GenericForeignKey('content_type', 'object_id')
