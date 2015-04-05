@@ -2,6 +2,15 @@ from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
+
+class CustomField(models.Field):
+    def __init__(self, *args, **kwargs):
+        super(CustomField, self).__init__(*args, **kwargs)
+
+    def db_type(self, connection):
+        return 'customfield'
+
+
 class Bar(models.Model):
     name = models.CharField(max_length=250)
 
@@ -22,6 +31,7 @@ class Foo(models.Model):
     file_field = models.FileField(upload_to='test')
     bar = models.ForeignKey(Bar, null=True)
     bazzes = models.ManyToManyField(Baz)
+    custom_field = CustomField()
 
 
 class Item(models.Model):
