@@ -4,7 +4,7 @@ from datetime import datetime
 
 from django.contrib.contenttypes.models import ContentType
 
-from conduit.api import Api
+from conduit.api import Api, fields
 from conduit.test.testcases import ConduitTestCase
 
 from api.views import BarResource, ContentTypeResource, FooResource, ItemResource
@@ -248,7 +248,8 @@ class ResourceTestCase(ConduitTestCase):
             'id': 1,
             'integer': 12,
             'name': 'Foo Name',
-            'text': 'text goes here'
+            'text': 'text goes here',
+            'custom_field': 'some custom text',
         }
 
         foo_list_uri = self.foo_resource._get_resource_uri()
@@ -298,3 +299,4 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(content['integer'], 12)
         self.assertEqual(content['name'], 'Foo Name')
         self.assertEqual(content['text'], 'text goes here')
+        self.assertEqual(content['custom_field'], 'some custom text')
