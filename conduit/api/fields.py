@@ -1,7 +1,11 @@
 import six
+import pprint
 from importlib import import_module
 from django.core.urlresolvers import resolve
 from django.db.models.loading import get_model
+
+import logging
+logger = logging.getLogger('conduit')
 
 
 def import_class(resource_cls_str):
@@ -127,6 +131,8 @@ class ForeignKeyField(APIField):
             if self.embed:
                 for methodname in self.dehydrate_conduit:
                     bound_method = resource._get_method(methodname)
+                    pretty_kwargs = pprint.pformat(kwargs)
+                    logger.debug('\n[ {0}.{1} ]: kwargs = \n{2}'.format(resource.__class__.__name__, bound_method.__name__, pretty_kwargs))
                     (request, args, kwargs,) = bound_method(request, *args, **kwargs)
                 # Grab the dehydrated data and place it on the parent's bundle
                 related_bundle = kwargs['bundles'][0]
@@ -153,6 +159,8 @@ class ForeignKeyField(APIField):
             resource.Meta.api = parent_inst.Meta.api
             for methodname in self.save_conduit:
                 bound_method = resource._get_method(methodname)
+                pretty_kwargs = pprint.pformat(kwargs)
+                logger.debug('\n[ {0}.{1} ]: kwargs = \n{2}'.format(resource.__class__.__name__, bound_method.__name__, pretty_kwargs))
                 (request, args, kwargs,) = bound_method(request, *args, **kwargs)
 
             related_obj = kwargs['bundles'][0]['obj']
@@ -222,6 +230,8 @@ class ManyToManyField(APIField):
         if self.embed:
             for methodname in self.dehydrate_conduit:
                 bound_method = resource._get_method(methodname)
+                pretty_kwargs = pprint.pformat(kwargs)
+                logger.debug('\n[ {0}.{1} ]: kwargs = \n{2}'.format(resource.__class__.__name__, bound_method.__name__, pretty_kwargs))
                 (request, args, kwargs,) = bound_method(request, *args, **kwargs)
 
             dehydrated_data = []
@@ -379,7 +389,7 @@ class GenericForeignKeyField(APIField):
         attribute based on a model. First looks for `app_name.Model_name`,
         falling back to `Model_name`.
 
-        If no resource_map is specified it will fall back to the API 
+        If no resource_map is specified it will fall back to the API
         """
         app_label = model._meta.app_label
         model_name = model.__name__
@@ -411,6 +421,8 @@ class GenericForeignKeyField(APIField):
                 kwargs = {'objs': [obj], 'pub': ['detail', 'get']}
                 for methodname in self.dehydrate_conduit:
                     bound_method = resource._get_method(methodname)
+                    pretty_kwargs = pprint.pformat(kwargs)
+                    logger.debug('\n[ {0}.{1} ]: kwargs = \n{2}'.format(resource.__class__.__name__, bound_method.__name__, pretty_kwargs))
                     (request, args, kwargs,) = bound_method(request, *args, **kwargs)
                 # Grab the dehydrated data and place it on the parent's bundle
                 related_bundle = kwargs['bundles'][0]

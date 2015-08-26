@@ -1,3 +1,4 @@
+import pprint
 from importlib import import_module
 from conduit.exceptions import HttpInterrupt
 from django.db import transaction
@@ -35,7 +36,8 @@ class Conduit(object):
             with transaction.commit_on_success():
                 for method_string in self.Meta.conduit[:-1]:
                     bound_method = self._get_method(method_string)
-                    logger.debug( "\n[ {0} ]: kwargs = \n{1}".format( bound_method.__name__, kwargs ) )
+                    pretty_kwargs = pprint.pformat(kwargs)
+                    logger.debug('\n[ {0}.{1} ]: kwargs = \n{2}'.format(self.__class__.__name__, bound_method.__name__, pretty_kwargs))
                     (request, args, kwargs,) = bound_method( request, *args, **kwargs)
         except HttpInterrupt as e:
             return e.response
@@ -51,4 +53,3 @@ class Conduit(object):
             bound_method = self._get_method(method_string)
             (args, kwargs,) = bound_method(*args, **kwargs)
         return args, kwargs
-

@@ -339,6 +339,7 @@ class ResourceTestCase(ConduitTestCase):
             content_type='application/json'
         )
         content = json.loads(response.content.decode())
+        print(content)
 
         self.assertTrue(content['id'])
         self.assertTrue(content['resource_uri'])

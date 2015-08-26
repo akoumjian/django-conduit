@@ -179,9 +179,14 @@ LOGGING = {
             'propagate': True,
         },
         'django.db': {
-            'handlers': ['null'],  
+            'handlers': ['null'],
             'level':'ERROR',
             'propagate': False,
+        },
+        'conduit': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propogate': True,
         },
     }
 }
