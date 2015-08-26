@@ -274,7 +274,6 @@ class ManyToManyField(APIField):
                     # Creating a new object
                     kwargs['pub'] = ['post', 'list']
 
-
             resource = self.resource_cls()
             resource.Meta.api = parent_inst.Meta.api
             for methodname in self.save_conduit:
@@ -290,7 +289,7 @@ class ManyToManyField(APIField):
         related_objs = []
         for bundle in related_bundles:
             related_objs.append(bundle['obj'])
-        
+
         # The parent object must be persisted before
         # we can use related managers
         if not getattr(obj, pk_field, None):
