@@ -430,6 +430,16 @@ class ModelResource(Resource):
         """
         Convert deserialized data types into Python types
         """
+        explicit_field = self._get_explicit_field_by_attribute(
+            attribute=field.name
+        )
+
+        if explicit_field:
+            try:
+                return explicit_field.from_basic_type(data)
+            except AttributeError:
+                pass
+
         if isinstance(field, models.AutoField):
             return data
 
@@ -837,6 +847,15 @@ class ModelResource(Resource):
         """
         Convert complex data types into serializable types
         """
+        explicit_field = self._get_explicit_field_by_attribute(
+            attribute=field.name)
+
+        if explicit_field:
+            try:
+                return explicit_field.to_basic_type(obj, field)
+            except AttributeError as err:
+                pass
+
         if isinstance(field, models.AutoField):
             return field.value_from_object(obj)
 
