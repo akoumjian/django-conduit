@@ -340,11 +340,7 @@ class ResourceTestCase(ConduitTestCase):
             content_type='application/json'
         )
         content = json.loads(response.content.decode())
-        print(content)
 
         self.assertTrue(content['id'])
         self.assertTrue(content['resource_uri'])
-        self.assertEqual(content['content_type'], None)
-        self.assertEqual(content['content_type_id'], None)
-        self.assertEqual(content['object_id'], None)
-        self.assertEqual(content['custom_field'], 'some custom text')
+        self.assertEqual(content['content_object'], None)
