@@ -1,7 +1,13 @@
 import pprint
 from importlib import import_module
 from conduit.exceptions import HttpInterrupt
-from django.db import transaction
+
+# Django 1.7 deprecates `commit_on_success` in favor of `atomic`
+try:
+    from django.db.transaction import atomic as transaction_method
+except ImportError:
+    from django.db.transaction import commit_on_success as transaction_method
+
 
 import logging
 logger = logging.getLogger('conduit')
@@ -33,7 +39,7 @@ class Conduit(object):
             # Wrap the request in a transaction
             # If we see an exception (such as HttpInterrupt)
             # all model changes will be rolled back
-            with transaction.commit_on_success():
+            with transaction_method():
                 for method_string in self.Meta.conduit[:-1]:
                     bound_method = self._get_method(method_string)
                     pretty_kwargs = pprint.pformat(kwargs)
