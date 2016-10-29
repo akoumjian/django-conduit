@@ -15,9 +15,9 @@ env:
     - DJANGO=1.10
 
 install:
-    - pip install -q Django==$DJANGO --use-mirrors
-    - pip install -q . --use-mirrors
-    - pip install -q -r requirements.txt --use-mirrors
+    - pip install -q Django==$DJANGO
+    - pip install -q .
+    - pip install -q -r requirements.txt
 
 before_script:
     - bash ./travis_postgis_setup.sh
