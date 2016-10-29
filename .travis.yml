@@ -8,10 +8,11 @@ python:
     - "3.3"
 
 env:
-    - DJANGO=1.4
-    - DJANGO=1.5
     - DJANGO=1.6
     - DJANGO=1.7
+    - DJANGO=1.8
+    - DJANGO=1.9
+    - DJANGO=1.10
 
 install:
     - pip install -q Django==$DJANGO --use-mirrors
@@ -25,9 +26,11 @@ script: python example/manage.py test conduit
 
 matrix:
   exclude:
-    - python: "3.2"
-      env: DJANGO=1.4
-    - python: "3.3"
-      env: DJANGO=1.4
     - python: "2.6"
       env: DJANGO=1.7
+    - python: "2.6"
+      env: DJANGO=1.8
+    - python: "2.6"
+      env: DJANGO=1.9
+    - python: "2.6"
+      env: DJANGO=1.10
