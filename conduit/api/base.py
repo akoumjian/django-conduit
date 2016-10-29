@@ -30,7 +30,7 @@ class Api(object):
         self._app_models = {}
 
     def register(self, resource_instance):
-        # Add to list of resources 
+        # Add to list of resources
         self._resources.append(resource_instance)
         # Add to dict of resources by model name
         model = getattr(resource_instance.Meta, 'model', None)
