@@ -299,7 +299,6 @@ class ResourceTestCase(ConduitTestCase):
         self.assertEqual(content['integer'], 12)
         self.assertEqual(content['name'], 'Foo Name')
         self.assertEqual(content['text'], 'text goes here')
-<<<<<<< HEAD
 
     def test_related_fields_empty_data(self):
         data = {
