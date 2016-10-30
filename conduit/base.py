@@ -45,7 +45,6 @@ class Conduit(object):
                     bound_method = self._get_method(method_string)
                     pretty_kwargs = pprint.pformat(kwargs)
                     logger.debug('\n[ {0}.{1} ]: kwargs = \n{2}'.format(self.__class__.__name__, bound_method.__name__, pretty_kwargs))
-                    print '\n[ {0}.{1} ]: kwargs = \n{2}'.format(self.__class__.__name__, bound_method.__name__, pretty_kwargs)
                     (request, args, kwargs,) = bound_method( request, *args, **kwargs)
         except HttpInterrupt as e:
             return e.response
