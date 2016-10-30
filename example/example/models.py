@@ -1,7 +1,10 @@
-from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
+try:
+    from django.contrib.contenttypes.generic import GenericForeignKey
+except ImportError:
+    from django.contrib.contenttypes.fields import GenericForeignKey
 
 class CustomField(models.Field):
     def __init__(self, *args, **kwargs):
@@ -37,4 +40,4 @@ class Foo(models.Model):
 class Item(models.Model):
     content_type = models.ForeignKey(ContentType, null=True)
     object_id = models.PositiveIntegerField(null=True)
-    content_object = generic.GenericForeignKey('content_type', 'object_id')
+    content_object = GenericForeignKey('content_type', 'object_id')

@@ -5,8 +5,8 @@ from django.http import HttpResponse
 from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf.urls import url
-from django.contrib.contenttypes import generic
 
 from decimal import Decimal
 from dateutil import parser
@@ -17,6 +17,7 @@ logger = logging.getLogger('conduit')
 from conduit import Conduit
 from conduit.subscribe import subscribe, avoid, match
 from conduit.exceptions import HttpInterrupt
+from conduit.api.utils import get_field_by_name, get_all_field_names
 
 
 class Api(object):
@@ -87,7 +88,10 @@ class Resource(Conduit):
         resource_name = getattr(self.Meta, 'resource_name', None)
         # Guess name from model if not set
         if not resource_name:
-            resource_name = self.Meta.model._meta.module_name
+            # Django < 1.8 used 'module_name'
+            # Django >= 1.8 uses 'model_name'
+            meta = self.Meta.model._meta
+            resource_name = getattr(meta, 'module_name', getattr(meta, 'model_name'))
         return resource_name
 
     def _get_resource_uri(self, obj=None, data=None):
@@ -271,7 +275,7 @@ class ModelResource(Resource):
         if not obj:
             obj = self.Meta.model
         ## Django returns non-fields, like "id", so we filter them out
-        field_names = obj._meta.get_all_field_names()
+        field_names = get_all_field_names(obj)
         real_fields = []
         for field_name in field_names:
             if hasattr(obj, field_name):
@@ -287,8 +291,8 @@ class ModelResource(Resource):
         fieldnames = self._get_model_fields()
         matched_fieldnames = []
         for fieldname in fieldnames:
-            field_tuple = obj._meta.get_field_by_name(fieldname)
-            if isinstance(field_tuple[0], field_type):
+            field = get_field_by_name(obj, fieldname)
+            if isinstance(field, field_type):
                 matched_fieldnames.append(fieldname)
         return matched_fieldnames
 
@@ -487,6 +491,9 @@ class ModelResource(Resource):
         if isinstance(field, models.ManyToManyField):
             return data
 
+        if isinstance(field, GenericForeignKey):
+            return data
+
         logger.info('Could not find field type match for {0}'.format(field))
         return None
 
@@ -512,6 +519,7 @@ class ModelResource(Resource):
                 except FieldDoesNotExist:
                     # We don't try to modify fields we don't know about
                     # or artificial fields like resource_uri
+                    logger.debug('{0} not found on model.'.format(fieldname))
                     pass
         kwargs['request_data'] = data_dicts
         return request, args, kwargs
@@ -536,7 +544,7 @@ class ModelResource(Resource):
                     response = self.create_json_response(py_obj=message, status=400)
                     raise HttpInterrupt(response)
                 except KeyError:
-                    message = {'__all__': 'Data set missing id or key'}         
+                    message = {'__all__': 'Data set missing id or key'}
                     response = self.create_json_response(py_obj=message, status=400)
                     raise HttpInterrupt(response)
             else:
@@ -592,7 +600,7 @@ class ModelResource(Resource):
         Validates request data with a provided Django form
 
         If the model object exists, it will pass it in to the form instance.
-        If the form produces errors, a response is returned with a JSON 
+        If the form produces errors, a response is returned with a JSON
         representation of the errors.
         """
         form_class = getattr(self.Meta, 'form_class', None)
@@ -682,12 +690,10 @@ class ModelResource(Resource):
 
             # GFKs must be explicitly stated on Resource
             gfk_fieldnames = self._get_explicit_field_by_type('gfk')
-
             for fieldname in gfk_fieldnames:
                 if fieldname in request_data:
                     related_data = request_data.get(fieldname)
                     conduit_field = self._get_explicit_field_by_attribute(fieldname)
-
                     if conduit_field and related_data:
                         try:
                             conduit_field.save_related(request, self, obj, related_data)
@@ -710,14 +716,14 @@ class ModelResource(Resource):
             self._update_from_dict(obj, bundle['request_data'])
             obj.save()
             # Refetch the object so that we can return an accurate
-            # representation of the data that is being persisted 
+            # representation of the data that is being persisted
             bundle['obj'] = self.Meta.model.objects.get(**{self.Meta.pk_field: getattr( obj, self.Meta.pk_field )})
         return request, args, kwargs
 
     @subscribe(sub=['post', 'put'])
     def save_m2m_objs(self, request, *args, **kwargs):
         """
-        Adds or removes m2m objects to/from parent object. 
+        Adds or removes m2m objects to/from parent object.
 
         If m2m field is embed=True, will update m2m attributes or create new m2m objects
         """
@@ -812,7 +818,7 @@ class ModelResource(Resource):
             obj = bundle['obj']
             obj_data = {}
             for fieldname in self._get_model_fields(obj):
-                field = obj._meta.get_field_by_name(fieldname)[0]
+                field = get_field_by_name(obj, fieldname)
 
                 dehydrated_value = self._to_basic_type(obj, field)
                 if dehydrated_value is not None:
@@ -892,9 +898,8 @@ class ModelResource(Resource):
         if isinstance(field, models.ForeignKey):
             return field.value_from_object(obj)
 
-        ## FIXME: this is dangerous and stupid
         if isinstance(field, models.ManyToManyField):
-            return eval(field.value_to_string(obj))
+            return getattr(obj, field.name).values_list('id', flat=True)
 
         logger.info('Could not find field type match for {0}'.format(field))
         return None

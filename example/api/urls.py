@@ -1,8 +1,8 @@
 ## api/urls.py
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from conduit.api import Api
 from api.views import (
-    BarResource, 
+    BarResource,
     BazResource,
     ContentTypeResource,
     FooResource,
@@ -17,6 +17,6 @@ api.register(ContentTypeResource())
 api.register(FooResource())
 api.register(ItemResource())
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^', include(api.urls))
-)
+]

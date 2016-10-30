@@ -1,8 +1,9 @@
 from django.core.management.commands.runserver import Command as BaseCommand
 from django.conf.urls import patterns, url, include
-from conduit.api.utils import AutoAPI
+from conduit.api.auto_api import AutoAPI
 from django.conf import settings
 from importlib import import_module
+
 
 class Command(BaseCommand):
     def get_handler(self, *args, **options):

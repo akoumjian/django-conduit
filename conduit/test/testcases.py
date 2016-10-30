@@ -7,5 +7,6 @@ class ConduitTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
+        super(ConduitTestCase, cls).setUpClass()
         cls.client = Client()
         cls.factory = RequestFactory()

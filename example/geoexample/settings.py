@@ -134,9 +134,9 @@ INSTALLED_APPS = (
 
 ## GEO Specific Settings
 DATABASES['geodefault'] = {
-    'ENGINE': 'django.contrib.gis.db.backends.postgis' , 
-    'NAME': 'geoexample',                      
-    # 
+    'ENGINE': 'django.contrib.gis.db.backends.postgis' ,
+    'NAME': 'geoexample',
+    #
     #  NOTE: USER and PASSWORD below are defaulted to what Travis CI expects.
     #  You can skip setting up this database and running these tests by using the --testrunner flag:
     #  `python example/manage.py test --testrunner='conduit.test.non_geo_testrunner.NonGeoTestRunner'`
@@ -157,7 +157,7 @@ DATABASES['geodefault'] = {
     #
     #
     'USER': 'postgres',
-    'PASSWORD': '',   
+    'PASSWORD': '',
     'HOST': '',                # Empty for localhost through domain sockets or '127.0.0.1' for localhost through TCP.
     'PORT': '',                # Set to empty string for default.
 }
@@ -187,7 +187,7 @@ LOGGING = {
     'handlers': {
         'null': {
             'level': 'DEBUG',
-            'class':'django.utils.log.NullHandler',
+            'class':'logging.NullHandler',
         },
         'console': {
             'level': 'DEBUG',
@@ -212,7 +212,7 @@ LOGGING = {
             'propagate': True,
         },
         'django.db': {
-            'handlers': ['null'],  
+            'handlers': ['null'],
             'level':'ERROR',
             'propagate': False,
         },

@@ -232,6 +232,7 @@ class MethodTestCase(ConduitTestCase):
         class BarForm(forms.ModelForm):
             class Meta:
                 model = Bar
+                exclude = []
 
             def clean_name(self):
                 data = self.cleaned_data['name']
@@ -411,4 +412,3 @@ class MethodTestCase(ConduitTestCase):
 
         data = kwargs['bundles'][0]['response_data']
         self.assertEqual(data['resource_uri'], '/api/{0}/bar/{1}/'.format(self.resource.Meta.api.name, bar.pk))
-

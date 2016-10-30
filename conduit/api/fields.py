@@ -2,7 +2,11 @@ import six
 import pprint
 from importlib import import_module
 from django.core.urlresolvers import resolve
-from django.db.models.loading import get_model
+try:
+    from django.apps import apps
+    get_model = apps.get_model
+except ImportError:
+    from django.db.models.loading import get_model
 
 import logging
 logger = logging.getLogger('conduit')
@@ -435,7 +439,6 @@ class GenericForeignKeyField(APIField):
 
     def save_related(self, request, parent_inst, obj, rel_obj_data):
         self.setup_resource(obj=obj, api=parent_inst.Meta.api)
-
         related_obj = None
         if rel_obj_data is not None:
             resource = self.resource_cls()

@@ -25,7 +25,7 @@ class ResourceTestCase(ConduitTestCase):
         api.register(self.bar_resource)
         api.register(self.foo_resource)
 
-        self.bar_ctype = ContentType.objects.get(name='bar')
+        self.bar_ctype = ContentType.objects.get(model='bar')
 
     def test_gfk_post_list(self):
         data = [
@@ -77,9 +77,8 @@ class ResourceTestCase(ConduitTestCase):
             json.dumps(data),
             content_type='application/json'
         )
-
         bar = Bar.objects.get(name='Bar name one')
-        ctype = ContentType.objects.get(name='bar')
+        ctype = ContentType.objects.get(model='bar')
         response = self.client.get(item_uri)
         content = json.loads(response.content.decode())
 

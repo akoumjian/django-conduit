@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from optparse import make_option
-from conduit.api.utils import AutoAPI
+from conduit.api.auto_api import AutoAPI
 
 
 class Command(BaseCommand):

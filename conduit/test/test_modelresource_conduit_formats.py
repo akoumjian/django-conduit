@@ -1,4 +1,4 @@
-from django.conf.urls import patterns, url, include
+from django.conf.urls import url, include
 from conduit.api import ModelResource, Api
 import example
 import json
@@ -7,6 +7,7 @@ from example.models import Bar
 from conduit.test.testcases import ConduitTestCase
 from conduit.test.conduit_formats import ConduitBaseMixin
 import uuid
+
 
 class ResourceFormatTestCase(ConduitTestCase):
     urls = 'example.urls'
@@ -61,33 +62,32 @@ class ResourceFormatTestCase(ConduitTestCase):
 
         # override urls
         self.original_urls = example.urls.urlpatterns
-        example.urls.urlpatterns = patterns(
-            '',
+        example.urls.urlpatterns = [
             url(r'^api_as_func/', include(self.resource_as_func.Meta.api.urls)),
             url(r'^api_as_mixin/', include(self.resource_as_mixin.Meta.api.urls)),
             url(r'^api_as_context/', include(self.resource_as_context.Meta.api.urls))
-        )
+        ]
 
     def tearDown(self):
         super(ResourceFormatTestCase, self).tearDown()
         example.urls.urlpatterns = self.original_urls
 
     def test_resource_as_function(self):
-        bar = Bar( name=str( uuid.uuid4() )[:8] )  
+        bar = Bar( name=str( uuid.uuid4() )[:8] )
         bar.save()
         get_detail = self.factory.get('/{0}/{0}/'.format(bar.__class__.__name__,bar.id))
         response = self.resource_as_func.view( get_detail, *[], **{} )
         self.assertEqual(response['success'], True)
 
     def test_resource_as_mixin(self):
-        bar = Bar( name=str( uuid.uuid4() )[:8] )  
+        bar = Bar( name=str( uuid.uuid4() )[:8] )
         bar.save()
         get_detail = self.factory.get('/{0}/{0}/'.format(bar.__class__.__name__,bar.id))
         response = self.resource_as_mixin.view( get_detail, *[], **{} )
         self.assertEqual(response['success'], True)
 
     def test_resource_as_context(self):
-        bar = Bar( name=str( uuid.uuid4() )[:8] )  
+        bar = Bar( name=str( uuid.uuid4() )[:8] )
         bar.save()
         get_detail = self.factory.get('/{0}/{0}/'.format(bar.__class__.__name__,bar.id))
         response = self.resource_as_context.view( get_detail, *[], **{} )

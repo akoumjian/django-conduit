@@ -23,7 +23,6 @@ class CustomField(fields.APIField):
 class BarResource(ModelResource):
     class Meta(ModelResource.Meta):
         model = Bar
-        # allowed_methods = ['get', 'put']
 
 
 class BazResource(ModelResource):
