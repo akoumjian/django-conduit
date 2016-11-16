@@ -1,14 +1,15 @@
 import inspect
-try:
-    from django.apps import apps
-except ImportError:
-    from django.db.models import loading as apps
 
 from django.conf import settings
 
 from conduit.api import ModelResource
 from conduit.api import Api
 from conduit.api.fields import ForeignKeyField, ManyToManyField
+from conduit.api.utils import (
+    get_apps,
+    get_all_field_names,
+    get_field_by_name
+)
 
 
 class SelfDescModelResource(ModelResource):
@@ -76,15 +77,8 @@ class AutoAPI(object):
         if self.api_app_name is None:
             self.api_app_name = 'api'
         self.api = Api()
-        apps = []
-        if app_names:
-            for app in app_names:
-                app = apps.load_app(app)
-                apps.append(app)
-        else:
-            # Add all the apps if none are specified
-            all_apps = apps.get_apps()
-        for app in all_apps:
+        selected_apps = get_apps(*app_names)
+        for app in selected_apps:
             self.register_app(app)
 
     def __to_string__(self):
@@ -126,7 +120,7 @@ class AutoAPI(object):
         resources_str += '\nfrom conduit.api.fields import ForeignKeyField, ManyToManyField'
 
         for app_name, models in self.api._app_models.items():
-            resources_str += '\nfrom {0} import {1}'.format(app_name, ', '.join(models))
+            resources_str += '\nfrom {0}.models import {1}'.format(app_name, ', '.join(models))
 
         # Add resource class strings
         for res in self.api._resources:
@@ -141,9 +135,9 @@ class AutoAPI(object):
         if hasattr(model, '_meta'):
             field_names = get_all_field_names(model)
 
-            for f in field_names:
-                field = get_field_by_name(f)
-                if direct and field.rel:
+            for field_name in field_names:
+                field = get_field_by_name(model, field_name)
+                if (not field.auto_created or field.concrete) and field.rel:
                     related_fields[field.name] = field
         return related_fields
 
@@ -166,7 +160,10 @@ class AutoAPI(object):
 
         # Iterate through related fields
         for name, field in related_fields.items():
-            related_model = field.related.parent_model
+            try:
+                related_model = field.related.parent_model
+            except AttributeError:
+                related_model = field.related.model
             # If a resource already exists on the api with this model
             # use that resource
             related_resource_instance = self.api._by_model.get(related_model, [None])[0]
@@ -194,12 +191,15 @@ class AutoAPI(object):
         resource_instance = self._add_related(resource_instance)
 
     def register_app(self, app):
-        app_models = apps.get_models(app)
+        app_models = list(app.get_models())
 
         # Save reference of model names from model module
         # Used in auto string generation
         app_models_names = [model.__name__ for model in app_models]
-        self.api._app_models.update({app.__name__: app_models_names})
+        name = getattr(app, 'name', None)
+        if name is None:
+            name = getattr(app, '__name__')
+        self.api._app_models.update({name: app_models_names})
         for model in app_models:
             self.register_model(model)
 

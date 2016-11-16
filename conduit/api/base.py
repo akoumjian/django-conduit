@@ -2,6 +2,7 @@ import json
 import six
 
 from django.http import HttpResponse
+from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.fields import FieldDoesNotExist
 from django.db import models
@@ -121,6 +122,16 @@ class Resource(Conduit):
             detail_view_name = '_'.join([api.name, detail_view_name])
         return list_view_name, detail_view_name
 
+    @property
+    def base_url(self):
+        resource_pattern = []
+        api = getattr(self.Meta, 'api', None)
+        if api:
+            resource_pattern.append(api.api_url)
+        resource_pattern.append(self._get_resource_name())
+        resource_pattern = '/'.join(resource_pattern)
+        return resource_pattern
+
     def _get_url_patterns(self):
         # Fetch the names of the views
         # ie: v1_foo_list
@@ -128,12 +139,7 @@ class Resource(Conduit):
 
         # Create url patterns
         # ie detail: r'foo/(?P<pk>\w+)/$
-        resource_pattern = []
-        api = getattr(self.Meta, 'api', None)
-        if api:
-            resource_pattern.append(api.api_url)
-        resource_pattern.append(self._get_resource_name())
-        resource_pattern = '/'.join(resource_pattern)
+        resource_pattern = self.base_url
         list_view_pattern = r'^{0}/$'.format(resource_pattern)
         detail_view_pattern = r'^{0}/(?P<{1}>\w+)/$'.format(resource_pattern, self.Meta.pk_field)
 
@@ -198,6 +204,7 @@ class ModelResource(Resource):
             'json_to_python',
             'hydrate_request_data',
             'bundles_from_request_data',
+            'auth_global',
             'auth_get_detail',
             'auth_get_list',
             'auth_put_detail',
@@ -559,6 +566,9 @@ class ModelResource(Resource):
         return request, args, kwargs
 
     # Authorization hooks
+    def auth_global(self, request, *args, **kwargs):
+        return (request, args, kwargs)
+
     @match(match=['get', 'detail'])
     def auth_get_detail(self, request, *args, **kwargs):
         return (request, args, kwargs)
@@ -714,7 +724,11 @@ class ModelResource(Resource):
         for bundle in kwargs['bundles']:
             obj = bundle['obj']
             self._update_from_dict(obj, bundle['request_data'])
-            obj.save()
+            try:
+                obj.save()
+            except ValidationError as e:
+                response = self.create_json_response(py_obj={'error': e.message}, status=400)
+                raise HttpInterrupt(response)
             # Refetch the object so that we can return an accurate
             # representation of the data that is being persisted
             bundle['obj'] = self.Meta.model.objects.get(**{self.Meta.pk_field: getattr( obj, self.Meta.pk_field )})
