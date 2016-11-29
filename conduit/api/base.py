@@ -20,6 +20,12 @@ from conduit.subscribe import subscribe, avoid, match
 from conduit.exceptions import HttpInterrupt
 from conduit.api.utils import get_field_by_name, get_all_field_names
 
+try:
+    from django.contrib.postgres.fields import ArrayField
+except ImportError:
+    class ArrayField(object):
+        pass
+
 
 class Api(object):
 
@@ -478,19 +484,22 @@ class ModelResource(Resource):
             return data
 
         if isinstance(field, models.DateTimeField):
-            if isinstance(data, six.string_types):
+            if data and isinstance(data, six.string_types):
                 return parser.parse(data)
             else:
-                return data
+                return None
 
         if isinstance(field, models.DateField):
-            if isinstance(data, six.string_types):
+            if data and isinstance(data, six.string_types):
                 return parser.parse(data)
             else:
-                return data
+                return None
 
         if isinstance(field, models.DecimalField):
             return Decimal(data)
+
+        if isinstance(field, ArrayField):
+            return data
 
         if isinstance(field, models.ForeignKey):
             return data
@@ -501,8 +510,8 @@ class ModelResource(Resource):
         if isinstance(field, GenericForeignKey):
             return data
 
-        logger.info('Could not find field type match for {0}'.format(field))
-        return None
+        logger.warn('Could not find field type match for {0}'.format(field))
+        return data
 
     @subscribe(sub=['post', 'put'])
     def hydrate_request_data(self, request, *args, **kwargs):
@@ -727,6 +736,7 @@ class ModelResource(Resource):
             try:
                 obj.save()
             except ValidationError as e:
+                logger.info(e)
                 response = self.create_json_response(py_obj={'error': e.message}, status=400)
                 raise HttpInterrupt(response)
             # Refetch the object so that we can return an accurate
@@ -789,11 +799,17 @@ class ModelResource(Resource):
 
     @match(match=['get', 'list'])
     def get_list(self, request, *args, **kwargs):
+        ## Prepare the metadata
         kwargs['meta'] = {
             'total': kwargs['total_count'],
             'limit': kwargs['limit'],
             'offset': kwargs['offset'],
         }
+
+        full_path = request.get_full_path() or None
+        if full_path is not None:
+            kwargs['meta']['uri'] = full_path
+
         kwargs['status'] = 200
         return (request, args, kwargs)
 
@@ -912,6 +928,11 @@ class ModelResource(Resource):
         if isinstance(field, models.ForeignKey):
             return field.value_from_object(obj)
 
+        if isinstance(field, ArrayField):
+            print 'conduit array field'
+            print field.value_from_object(obj)
+            return field.value_from_object(obj)
+
         if isinstance(field, models.ManyToManyField):
             return getattr(obj, field.name).values_list('id', flat=True)
 
@@ -926,6 +947,7 @@ class ModelResource(Resource):
 
         if 'detail' in kwargs['pub']:
             kwargs['response_data'] = data_dicts[0]
+
         if 'get' in kwargs['pub'] and 'list' in kwargs['pub']:
             kwargs['response_data'] = {
                 'meta': kwargs['meta'],
